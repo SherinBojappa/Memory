@@ -112,7 +112,7 @@ def showPlot(points):
     plt.plot(points)
     plt.show()
 
-def train_iters(encoder, decoder, n_iters, print_every = 1000, plot_every=1000,
+def train_iters(encoder, decoder, seq_len, n_iters, print_every = 1000, plot_every=1000,
                 learning_rate = 0.001, num_samples=100):
     plot_losses = []
     print_loss_total = 0
@@ -124,7 +124,7 @@ def train_iters(encoder, decoder, n_iters, print_every = 1000, plot_every=1000,
     # x - one hot vectors
     # y - sequence of 0 and 1 based on whether the current letter is unrepeated
     # or repeated
-    x, y = generate_dataset(num_samples)
+    x, y = generate_dataset(num_samples, seq_len)
 
 
     #train_pair = tensorsFromIpTarget(x, y)

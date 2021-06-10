@@ -7,7 +7,7 @@ sequences are 0 or 1 depending on whether the character is seen before or not
 from string import ascii_lowercase
 from random import choice
 
-seq_len = 10
+#seq_len = 10
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 
 
@@ -29,13 +29,14 @@ def one_hot_decoding(alphabet, one_hot_ip):
         num_to_letter[num] = letter
 
     seq = list()
+    pos = 0
     for val in one_hot_ip:
-        for num, val in enumerate(val):
-            if val == 1:
-                letter = num_to_letter[num]
-                break
+        if val == 1:
+            letter = num_to_letter[pos]
+            break
+        pos = pos+1
 
-        seq.append(letter)
+    seq.append(letter)
     return seq
 
 
@@ -49,8 +50,9 @@ def one_hot_encoding(sequence, letter_to_num):
     return one_hot_encoded
 
 
-def generate_labels(sequence, seq_len):
+def generate_labels(sequence):
     new_list = list()
+    seq_len = len(sequence)
     label = [0]*seq_len
     for num, letter in enumerate(sequence):
         #print(num, letter)
@@ -62,7 +64,7 @@ def generate_labels(sequence, seq_len):
     return label
 
 
-def generate_dataset(num_samples):
+def generate_dataset(num_samples, seq_len):
     letter_to_num = letter_to_num_map(alphabet)
     x = list()
     y = list()
@@ -71,15 +73,31 @@ def generate_dataset(num_samples):
         #print(sequence)
         sequence_one_hot = one_hot_encoding(sequence, letter_to_num)
         # print(sequence_one_hot)
-        label = generate_labels(sequence, seq_len)
+        label = generate_labels(sequence)
         # print(label)
         x.append(sequence_one_hot)
         y.append(label)
 
     return x, y
 
+"""
+num_samples = 10
+seq_len = 20
 
-#x, y = generate_dataset(num_samples)
-#print(x[0])
-#print(one_hot_decoding(alphabet, x[0]))
-#print(y[0])
+x, y = generate_dataset(num_samples, seq_len)
+
+batch = []
+for sequence in range(num_samples):
+
+    seq = []
+    for token in range(seq_len):
+       seq.append(one_hot_decoding(alphabet, x[sequence][token]))
+    batch.append(seq)
+
+
+
+seq_list = [(batch[seq], y[seq]) for seq in range(num_samples)]
+
+for sample in range(num_samples):
+    print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(seq_list[sample][1]))
+"""
