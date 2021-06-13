@@ -7,7 +7,6 @@ sequences are 0 or 1 depending on whether the character is seen before or not
 from string import ascii_lowercase
 from random import choice
 
-#seq_len = 10
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 
 

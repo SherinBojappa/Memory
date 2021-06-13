@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 n_iters = 5000
 num_samples = n_iters
-seq_len = 5
+seq_len = 10
 
 # x - one hot vectors
 # y - sequence of 0 and 1 based on whether the current letter is unrepeated
