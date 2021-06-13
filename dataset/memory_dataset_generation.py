@@ -130,7 +130,7 @@ def generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
 
     return x, y
 
-####
+"""
 num_samples = 100
 seq_len = 10
 num_repeat = 1
@@ -156,7 +156,7 @@ seq_list = [(batch[seq], y[seq]) for seq in range(num_samples)]
 for sample in range(num_samples):
     print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(seq_list[sample][1]))
 
-####
+"""
 
 """
 max_seq_len = 26

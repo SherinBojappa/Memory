@@ -14,6 +14,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 n_iters = 5000
 num_samples = n_iters
 seq_len = 10
+num_repeat = 1
+repeat_dist = 2
+num_tokens_rep = 1
+max_seq_len = 26
 
 # x - one hot vectors
 # y - sequence of 0 and 1 based on whether the current letter is unrepeated
@@ -32,7 +36,11 @@ encoder1 = EncoderRNN(input_size, hidden_size, device).to(device)
 
 decoder1 = DecoderRNN(input_size_decoder, hidden_size, output_size, device, dropout_p=0.1).to(device)
 
-train_iters(encoder1, decoder1, seq_len, n_iters=n_iters, print_every=1, num_samples=num_samples)
+train_iters(encoder1, decoder1, seq_len, n_iters=n_iters, print_every=1,
+            num_samples=num_samples, num_repeat = num_repeat,
+            repeat_dist = repeat_dist,
+            num_tokens_rep = num_tokens_rep,
+            max_seq_len = max_seq_len)
 
 def evaluate(encoder, decoder, seq, max_length = MAX_LENGTH):
     with torch.no_grad():
@@ -77,7 +85,8 @@ def evaluate(encoder, decoder, seq, max_length = MAX_LENGTH):
 
 def evaluateRandomly(encoder, decoder, n=10):
     for i in range(n):
-        x, y = generate_dataset(1, seq_len)
+        x, y = generate_dataset(1, seq_len, num_repeat, repeat_dist,
+                                num_tokens_rep, max_seq_len)
 
         #print('>', x)
         print('=', y)

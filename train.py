@@ -24,7 +24,7 @@ import numpy as np
 #import sys
 #sys.path.apend("./dataset")
 #import dataset.dataset_generation.py as data
-from dataset.dataset_generation import *
+from dataset.memory_dataset_generation import *
 from train import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -113,7 +113,8 @@ def showPlot(points):
     plt.show()
 
 def train_iters(encoder, decoder, seq_len, n_iters, print_every = 1000, plot_every=1000,
-                learning_rate = 0.001, num_samples=100):
+                learning_rate = 0.001, num_samples=100, num_repeat=1, repeat_dist=1,
+                            num_tokens_rep=1, max_seq_len=26):
     plot_losses = []
     print_loss_total = 0
     plot_loss_total = 0
@@ -124,7 +125,9 @@ def train_iters(encoder, decoder, seq_len, n_iters, print_every = 1000, plot_eve
     # x - one hot vectors
     # y - sequence of 0 and 1 based on whether the current letter is unrepeated
     # or repeated
-    x, y = generate_dataset(num_samples, seq_len)
+
+    x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
+                            num_tokens_rep, max_seq_len)
 
 
     #train_pair = tensorsFromIpTarget(x, y)
