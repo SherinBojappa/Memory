@@ -33,7 +33,6 @@ MAX_LENGTH = 11
 
 EOS_token_input = [1.0]*26
 EOS_token_target = 2.0
-SOS_token_input = [0.0]*26
 SOS_token_target = -1.0
 
 

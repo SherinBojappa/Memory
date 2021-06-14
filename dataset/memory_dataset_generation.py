@@ -11,19 +11,12 @@ from numpy.random import randint
 import matplotlib.pyplot as plt
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
-
-def letter_to_num_map(alphabet):
-    letter_to_num = {}
-    for num, letter in enumerate(alphabet):
-        letter_to_num[letter] = num
-
-    return letter_to_num
-
+num_to_letter = {}
+num_to_letter[0] = " "
+for num, letter in enumerate(alphabet):
+    num_to_letter[num + 1] = letter
 
 def one_hot_decoding(alphabet, one_hot_ip):
-    num_to_letter = {}
-    for num, letter in enumerate(alphabet):
-        num_to_letter[num] = letter
 
     seq = list()
     pos = 0
@@ -70,7 +63,7 @@ def generate_sequence(seq_len, num_repeat=1, repeat_dist=1,
     :return: sequence
     """
 
-    seq_list = np.arange(max_seq_len)
+    seq_list = np.arange(1, max_seq_len+1)
     shuffle(seq_list)
     seq_list = seq_list[:seq_len]
 
@@ -98,16 +91,8 @@ def generate_sequence(seq_len, num_repeat=1, repeat_dist=1,
 
     return seq_list, rep_token
 
-def num_to_letter_map(alphabet):
-    num_to_letter = {}
-    for num, letter in enumerate(alphabet):
-        num_to_letter[num] = letter
-
-    return num_to_letter
-
 def generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
                      num_tokens_rep, max_seq_len):
-    num_to_letter = num_to_letter_map(alphabet)
     x = list()
     y = list()
 
@@ -120,7 +105,7 @@ def generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
 
         sequence_one_hot = []
         for token in sequence:
-            seq_token = [0]*max_seq_len
+            seq_token = [0]*(max_seq_len+1)
             seq_token[token] = 1
             sequence_one_hot.append(seq_token)
         x.append(sequence_one_hot)
@@ -130,7 +115,7 @@ def generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
 
     return x, y
 
-"""
+
 num_samples = 100
 seq_len = 10
 num_repeat = 1
@@ -156,15 +141,21 @@ seq_list = [(batch[seq], y[seq]) for seq in range(num_samples)]
 for sample in range(num_samples):
     print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(seq_list[sample][1]))
 
-"""
+
 
 """
 max_seq_len = 26
 x_axis = range(0, max_seq_len)
 token_list = []
 seq_batch = []
-for iter in range(100):
-    seq_list, rep_token = generate_sequence(10, 1, 5, 1, max_seq_len)
+seq_len=10
+num_repeat=1
+repeat_dist=5
+num_tokens_rep=1
+max_seq_len=26
+for iter in range(10000):
+    seq_list, rep_token = generate_sequence(seq_len, num_repeat, repeat_dist,
+                                            num_tokens_rep, max_seq_len)
     #print(rep_token)
     token_list.append(rep_token[0])
     #print(seq_list)
@@ -178,6 +169,6 @@ plt.hist(token_list, bins = max_seq_len)
 
 # Show plot
 plt.show(block=True)
-"""
 
+"""
 

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-n_iters = 5000
+n_iters = 50000
 num_samples = n_iters
 seq_len = 10
 num_repeat = 1
@@ -29,7 +29,7 @@ max_seq_len = 26
 # input is one-hot encoded vectors of the alphabet
 input_size = 26
 input_size_decoder = 1
-hidden_size = 256
+hidden_size = 50
 # output can either be 0: not repeated or 1: repeated 2: eos
 output_size = 3
 encoder1 = EncoderRNN(input_size, hidden_size, device).to(device)
