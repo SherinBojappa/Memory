@@ -22,7 +22,11 @@ seq_len = 10
 num_repeat = 1
 repeat_dist = 2
 num_tokens_rep = 1
-max_seq_len = 26
+# max seq len = 26+eos
+max_seq_len = 27
+eos_encoder = np.zeros(max_seq_len)
+eos_encoder[0] = 1
+eos_decoder = 2
 
 if input_seq == 'default':
     # Vectorize the data.
@@ -86,17 +90,31 @@ if input_seq == 'default':
         decoder_input_data[i, t + 1 :, target_token_index[" "]] = 1.0
         decoder_target_data[i, t:, target_token_index[" "]] = 1.0
 else:
-    encoder_input_data = np.zeros((num_samples, seq_len, max_seq_len),
+    encoder_input_data = np.zeros((num_samples, seq_len+1, max_seq_len),
                                       dtype="float32")
-    decoder_input_data = np.zeros((num_samples, seq_len), dtype="float32")
-    decoder_target_data = np.zeros((num_samples, seq_len), dtype="float32")
+    decoder_input_data = np.zeros((num_samples, seq_len+1), dtype="float32")
+    decoder_target_data = np.zeros((num_samples, seq_len+1), dtype="float32")
+
+    num_decoder_tokens = max_seq_len
+    num_encoder_tokens = max_seq_len
 
     x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
-                                num_tokens_rep, max_seq_len)
+                                num_tokens_rep, max_seq_len-1)
+
+
 
     for i in range(num_samples):
-            encoder_input_data[i] = x[i]
-            decoder_input_data[i] = y[i]
+        for seq in range(seq_len+1):
+            if seq != seq_len:
+                encoder_input_data[i, seq] = x[i][seq]
+                decoder_input_data[i, seq] = y[i][seq]
+                if (seq > 0):
+                    # decoder target data lags decoder input by 1
+                    decoder_target_data[i, seq-1] = decoder_input_data[i, seq]
+            if seq == seq_len:
+                encoder_input_data[i, seq] = eos_encoder
+                decoder_input_data[i, seq] = eos_decoder
+                decoder_target_data[seq-1] = eos_decoder
 
 
 
@@ -109,7 +127,7 @@ encoder_outputs, state_h, state_c = encoder(encoder_inputs)
 encoder_states = [state_h, state_c]
 
 # Set up the decoder, using `encoder_states` as initial state.
-decoder_inputs = keras.Input(shape=(None, num_decoder_tokens))
+decoder_inputs = keras.Input(shape=(None, 1))
 
 # We set up our decoder to return full output sequences,
 # and to return internal states as well. We don't use the
