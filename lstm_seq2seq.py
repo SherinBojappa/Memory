@@ -4,21 +4,22 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from dataset.memory_dataset_generation import *
+from sklearn.model_selection import train_test_split
 
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
 batch_size = 64  # Batch size for training.
 #batch_size = 5
 #epochs = 100  # Number of epochs to train for.
-epochs = 1
+epochs = 5
 latent_dim = 256  # Latent dimensionality of the encoding space.
 #num_samples = 10000  # Number of samples to train on.
-num_samples = 100
+num_samples = 1000
 # Path to the data txt file on disk.
 data_path = "fra.txt"
 #input_seq = 'default'
 input_seq = 'synthetic'
-seq_len = 10
+seq_len = 5
 num_repeat = 1
 repeat_dist = 2
 num_tokens_rep = 1
@@ -28,6 +29,7 @@ eos_encoder = np.zeros(max_seq_len)
 eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
+verbose = 0
 
 if input_seq == 'default':
     # Vectorize the data.
@@ -102,6 +104,12 @@ else:
     x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
                                 num_tokens_rep, max_seq_len-1)
 
+    if(verbose == 1):
+        decode_seq(x, y, num_samples, seq_len)
+
+
+
+
     one_hot_encoding_label = np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
 
     for i in range(num_samples):
@@ -123,7 +131,15 @@ else:
                 decoder_target_data[i, seq-1] = decoder_input_data[i, seq]
                 decoder_target_data[i, seq] = one_hot_encoding_label[eos_decoder]
 
+num_train = 0.8*encoder_input_data.shape[0]
+encoder_input_data_train = encoder_input_data[0:int(num_train)][:][:]
+decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
+decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
 
+num_test = 0.2*encoder_input_data.shape[0]
+encoder_input_data_test = encoder_input_data[0:int(num_test)][:][:]
+decoder_input_data_test = decoder_input_data[0:int(num_test)][:][:]
+decoder_target_data_test = decoder_target_data[0:int(num_test)][:][:]
 
 # Define an input sequence and process it.
 encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
@@ -144,6 +160,8 @@ decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_state
 decoder_dense = keras.layers.Dense(num_decoder_tokens, activation="softmax")
 decoder_outputs = decoder_dense(decoder_outputs)
 
+# divide into training and test sets 80% and 20%
+
 # Define the model that will turn
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = keras.Model([encoder_inputs, decoder_inputs], decoder_outputs)
@@ -152,8 +170,8 @@ model.compile(
     optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
 )
 model.fit(
-    [encoder_input_data, decoder_input_data],
-    decoder_target_data,
+    [encoder_input_data_train, decoder_input_data_train],
+    decoder_target_data_train,
     batch_size=batch_size,
     epochs=epochs,
     validation_split=0.2,
@@ -278,11 +296,14 @@ else:
     for seq_index in range(20):
         # Take one sequence (part of the training set)
         # for trying out decoding.
-        input_seq = encoder_input_data[seq_index: seq_index + 1]
+        input_seq = encoder_input_data_test[seq_index: seq_index + 1]
         decoded_sentence = decode_sequence(input_seq)
         print("-")
-        print("Input sentence:", input_seq)
         print("Decoded sentence:", decoded_sentence)
+        seq = []
+        for num in range(seq_len):
+            seq.append(one_hot_decoding(alphabet, input_seq[0][num][:]))
+        print("Input sentence:", seq)
 
 
 

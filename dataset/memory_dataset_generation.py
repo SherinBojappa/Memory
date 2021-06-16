@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 num_to_letter = {}
-num_to_letter[0] = " "
+num_to_letter[0] = "eos"
 for num, letter in enumerate(alphabet):
     num_to_letter[num + 1] = letter
 
@@ -71,6 +71,20 @@ def generate_sequence(seq_len, num_repeat=1, repeat_dist=1,
     #TODO may need to adjust the program to  repeat if num_repeat >1
     # insert the token to repeat
     rep_pos = randint(0, seq_len-num_repeat*repeat_dist, 1)
+    #print(rep_pos)
+    # TODO multiple repeats
+
+    while(1):
+        if(rep_pos + repeat_dist+1 >= seq_len):
+            if( rep_pos - repeat_dist-1 < 0):
+                rep_pos = randint(0, seq_len - num_repeat * repeat_dist, 1)
+                #print("In while loop")
+                #print(rep_pos)
+            else:
+                break
+        else:
+            break
+
     #print("rep pos " + str(rep_pos))
     rep_token = seq_list[rep_pos]
     #print(rep_token)
@@ -115,9 +129,24 @@ def generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
 
     return x, y
 
+def decode_seq(x, y, num_samples, seq_len):
+    batch = []
+    for sequence in range(num_samples):
 
-num_samples = 100
-seq_len = 10
+        seq = []
+        for token in range(seq_len):
+            seq.append(one_hot_decoding(alphabet, x[sequence][token]))
+        batch.append(seq)
+
+    seq_list = [(batch[seq], y[seq]) for seq in range(num_samples)]
+
+    for sample in range(num_samples):
+        print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(
+            seq_list[sample][1]))
+
+"""
+num_samples = 1000
+seq_len = 4
 num_repeat = 1
 repeat_dist = 2
 num_tokens_rep = 1
@@ -126,22 +155,9 @@ max_seq_len = 26
 x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
                      num_tokens_rep, max_seq_len)
 
-batch = []
-for sequence in range(num_samples):
+decode_seq(x,y, num_samples, seq_len)
 
-    seq = []
-    for token in range(seq_len):
-       seq.append(one_hot_decoding(alphabet, x[sequence][token]))
-    batch.append(seq)
-
-
-
-seq_list = [(batch[seq], y[seq]) for seq in range(num_samples)]
-
-for sample in range(num_samples):
-    print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(seq_list[sample][1]))
-
-
+"""
 
 """
 max_seq_len = 26
