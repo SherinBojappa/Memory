@@ -5,6 +5,8 @@ import tensorflow as tf
 from tensorflow import keras
 from dataset.memory_dataset_generation import *
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import classification_report
 
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
@@ -14,14 +16,14 @@ batch_size = 64  # Batch size for training.
 epochs = 5
 latent_dim = 256  # Latent dimensionality of the encoding space.
 #num_samples = 10000  # Number of samples to train on.
-num_samples = 1000
+num_samples = 10000
 # Path to the data txt file on disk.
 data_path = "fra.txt"
 #input_seq = 'default'
 input_seq = 'synthetic'
-seq_len = 5
+seq_len = 4
 num_repeat = 1
-repeat_dist = 2
+repeat_dist = 1
 num_tokens_rep = 1
 # max seq len = 26+eos
 max_seq_len = 27
@@ -95,8 +97,8 @@ if input_seq == 'default':
 else:
     encoder_input_data = np.zeros((num_samples, seq_len+1, max_seq_len),
                                       dtype="float32")
-    decoder_input_data = np.zeros((num_samples, seq_len+2, 4), dtype="float32")
-    decoder_target_data = np.zeros((num_samples, seq_len+2, 4), dtype="float32")
+    decoder_input_data = np.zeros((num_samples, seq_len+2, 3), dtype="float32")
+    decoder_target_data = np.zeros((num_samples, seq_len+2, 3), dtype="float32")
 
     num_decoder_tokens = 4
     num_encoder_tokens = max_seq_len
@@ -110,7 +112,7 @@ else:
 
 
 
-    one_hot_encoding_label = np.array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
+    one_hot_encoding_label = np.array([[1,0,0], [0,1,0], [0,0,1], [1,1,1]])
 
     for i in range(num_samples):
         for seq in range(seq_len+1):
@@ -137,9 +139,9 @@ decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
 decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
 
 num_test = 0.2*encoder_input_data.shape[0]
-encoder_input_data_test = encoder_input_data[0:int(num_test)][:][:]
-decoder_input_data_test = decoder_input_data[0:int(num_test)][:][:]
-decoder_target_data_test = decoder_target_data[0:int(num_test)][:][:]
+encoder_input_data_test = encoder_input_data[int(num_test):][:][:]
+decoder_input_data_test = decoder_input_data[int(num_test):][:][:]
+decoder_target_data_test = decoder_target_data[int(num_test):][:][:]
 
 # Define an input sequence and process it.
 encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
@@ -150,14 +152,14 @@ encoder_outputs, state_h, state_c = encoder(encoder_inputs)
 encoder_states = [state_h, state_c]
 
 # Set up the decoder, using `encoder_states` as initial state.
-decoder_inputs = keras.Input(shape=(None, num_decoder_tokens))
+decoder_inputs = keras.Input(shape=(None, 3))
 
 # We set up our decoder to return full output sequences,
 # and to return internal states as well. We don't use the
 # return states in the training model, but we will use them in inference.
 decoder_lstm = keras.layers.LSTM(latent_dim, return_sequences=True, return_state=True)
 decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_states)
-decoder_dense = keras.layers.Dense(num_decoder_tokens, activation="softmax")
+decoder_dense = keras.layers.Dense(num_decoder_tokens-1, activation="softmax")
 decoder_outputs = decoder_dense(decoder_outputs)
 
 # divide into training and test sets 80% and 20%
@@ -174,7 +176,7 @@ model.fit(
     decoder_target_data_train,
     batch_size=batch_size,
     epochs=epochs,
-    validation_split=0.2,
+    validation_split=0.3,
 )
 # Save model
 #model.save("s2s")
@@ -260,7 +262,7 @@ else:
         states_value = encoder_model.predict(input_seq)
 
         # Generate empty target sequence of length 1.
-        target_seq = np.zeros((1, 1, num_decoder_tokens))
+        target_seq = np.zeros((1, 1, 3))
         # Populate the first character of target sequence with the start character.
         target_seq[0,0:] = one_hot_encoding_label[sos_decoder]
         #target_seq[0, 0, target_token_index["\t"]] = 1.0
@@ -285,25 +287,39 @@ else:
                 stop_condition = True
 
             # Update the target sequence (of length 1).
-            target_seq = np.zeros((1, 1, num_decoder_tokens))
+            target_seq = np.zeros((1, 1, 3))
             target_seq[0, 0, :] = one_hot_encoding_label[sampled_token_index]
 
             # Update states
             states_value = [h, c]
         return decoded_sentence
 
+    y_pred = np.zeros((len(encoder_input_data_test), seq_len+2, 3), dtype="float32")
 
-    for seq_index in range(20):
+    one_hot_encoding_label = np.array(
+        [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
+    for seq_index in range(len(encoder_input_data_test)):
         # Take one sequence (part of the training set)
         # for trying out decoding.
         input_seq = encoder_input_data_test[seq_index: seq_index + 1]
         decoded_sentence = decode_sequence(input_seq)
+        val_one_hot = np.zeros((1,seq_len+2,3),dtype="float32")
+        for num, val in enumerate(decoded_sentence):
+            val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
+        y_pred[seq_index:seq_index+1] = val_one_hot
+        """
         print("-")
         print("Decoded sentence:", decoded_sentence)
         seq = []
         for num in range(seq_len):
             seq.append(one_hot_decoding(alphabet, input_seq[0][num][:]))
         print("Input sentence:", seq)
+        """
+    print("Balanced accuracy of test set")
+    y_true = decoder_target_data_test.argmax(axis=2).ravel()
+    y_est = y_pred.argmax(axis=2).ravel()
+    print(balanced_accuracy_score(y_true, y_est))
+    print(classification_report(y_true, y_est))
 
 
 
