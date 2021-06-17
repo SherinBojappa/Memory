@@ -70,16 +70,16 @@ def generate_sequence(seq_len, num_repeat=1, repeat_dist=1,
 
     #TODO may need to adjust the program to  repeat if num_repeat >1
     # insert the token to repeat
-    rep_pos = randint(0, seq_len-num_repeat*repeat_dist, 1)
+    rep_pos = randint(0, seq_len-1)
     #print(rep_pos)
     # TODO multiple repeats
 
     while(1):
         if(rep_pos + repeat_dist+1 >= seq_len):
             if( rep_pos - repeat_dist-1 < 0):
-                rep_pos = randint(0, seq_len - num_repeat * repeat_dist, 1)
-                #print("In while loop")
-                #print(rep_pos)
+                rep_pos = randint(0, seq_len - 1)
+                print("In while loop")
+                print(rep_pos)
             else:
                 break
         else:
@@ -146,7 +146,7 @@ def decode_seq(x, y, num_samples, seq_len):
 
 """
 num_samples = 1000
-seq_len = 4
+seq_len = 10
 num_repeat = 1
 repeat_dist = 2
 num_tokens_rep = 1
@@ -173,7 +173,7 @@ for iter in range(10000):
     seq_list, rep_token = generate_sequence(seq_len, num_repeat, repeat_dist,
                                             num_tokens_rep, max_seq_len)
     #print(rep_token)
-    token_list.append(rep_token[0])
+    token_list.append(rep_token)
     #print(seq_list)
     #print(token_list)
 
@@ -185,6 +185,6 @@ plt.hist(token_list, bins = max_seq_len)
 
 # Show plot
 plt.show(block=True)
-
 """
+
 

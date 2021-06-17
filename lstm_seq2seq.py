@@ -12,11 +12,11 @@ from sklearn.metrics import classification_report
 
 batch_size = 64  # Batch size for training.
 #batch_size = 5
-#epochs = 100  # Number of epochs to train for.
+#epochs = 5  # Number of epochs to train for.
 epochs = 5
 latent_dim = 256  # Latent dimensionality of the encoding space.
 #num_samples = 10000  # Number of samples to train on.
-num_samples = 10000
+num_samples = 100
 # Path to the data txt file on disk.
 data_path = "fra.txt"
 #input_seq = 'default'
@@ -32,6 +32,7 @@ eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
 verbose = 0
+
 
 if input_seq == 'default':
     # Vectorize the data.
@@ -95,13 +96,16 @@ if input_seq == 'default':
         decoder_input_data[i, t + 1 :, target_token_index[" "]] = 1.0
         decoder_target_data[i, t:, target_token_index[" "]] = 1.0
 else:
+
+    num_decoder_tokens = 3
+    num_encoder_tokens = max_seq_len
+    # seq len + 1 for alphabet + eos
     encoder_input_data = np.zeros((num_samples, seq_len+1, max_seq_len),
                                       dtype="float32")
+    # seq len + 2 for alphabet + eos + sos for input_data
+    # seq len + 2 for alphabet + eos; neglect last token
     decoder_input_data = np.zeros((num_samples, seq_len+2, 3), dtype="float32")
     decoder_target_data = np.zeros((num_samples, seq_len+2, 3), dtype="float32")
-
-    num_decoder_tokens = 4
-    num_encoder_tokens = max_seq_len
 
     x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
                                 num_tokens_rep, max_seq_len-1)
@@ -109,22 +113,23 @@ else:
     if(verbose == 1):
         decode_seq(x, y, num_samples, seq_len)
 
-
-
-
     one_hot_encoding_label = np.array([[1,0,0], [0,1,0], [0,0,1], [1,1,1]])
 
     for i in range(num_samples):
         for seq in range(seq_len+1):
+            # sos for decoder_input_data
             if seq == 0:
                 decoder_input_data[i, seq] = one_hot_encoding_label[sos_decoder]
                 encoder_input_data[i, seq] = x[i][seq]
+            # generic case
             elif seq != seq_len:
                 encoder_input_data[i, seq] = x[i][seq]
+                # adjust for sos
                 decoder_input_data[i, seq] = one_hot_encoding_label[y[i][seq-1]]
+                # decoder target data lags decoder input by 1
                 if (seq > 0):
-                    # decoder target data lags decoder input by 1
                     decoder_target_data[i, seq-1] = decoder_input_data[i, seq]
+            # append eos
             if seq == seq_len:
                 encoder_input_data[i, seq] = eos_encoder
                 decoder_input_data[i, seq] = one_hot_encoding_label[y[i][seq-1]]
@@ -133,6 +138,7 @@ else:
                 decoder_target_data[i, seq-1] = decoder_input_data[i, seq]
                 decoder_target_data[i, seq] = one_hot_encoding_label[eos_decoder]
 
+# train test split
 num_train = 0.8*encoder_input_data.shape[0]
 encoder_input_data_train = encoder_input_data[0:int(num_train)][:][:]
 decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
@@ -159,7 +165,7 @@ decoder_inputs = keras.Input(shape=(None, 3))
 # return states in the training model, but we will use them in inference.
 decoder_lstm = keras.layers.LSTM(latent_dim, return_sequences=True, return_state=True)
 decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_states)
-decoder_dense = keras.layers.Dense(num_decoder_tokens-1, activation="softmax")
+decoder_dense = keras.layers.Dense(num_decoder_tokens, activation="softmax")
 decoder_outputs = decoder_dense(decoder_outputs)
 
 # divide into training and test sets 80% and 20%
