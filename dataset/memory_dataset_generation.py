@@ -62,6 +62,7 @@ def generate_sequence(seq_len, num_repeat=1, repeat_dist=1,
     :param num_tokens_rep: number of tokens that are repeated in the seq
     :return: sequence
     """
+    # repeat position - recency; random but be balanced accross dataset
 
     seq_list = np.arange(1, max_seq_len+1)
     shuffle(seq_list)
@@ -70,6 +71,7 @@ def generate_sequence(seq_len, num_repeat=1, repeat_dist=1,
 
     #TODO may need to adjust the program to  repeat if num_repeat >1
     # insert the token to repeat
+    # fix 1st repeat position
     rep_pos = randint(0, seq_len-1)
     #print(rep_pos)
     # TODO multiple repeats
