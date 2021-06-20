@@ -54,10 +54,6 @@ def generate_labels(sequence):
     return label
 
 
-sequence, rep_token, first_token_pos, rep_dist = generate_seq(seq_len,
-                                                              num_repeat,
-                                                              num_tokens_rep,
-                                                              positive)
 def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     """
     :param seq_len: length of the sequence
