@@ -10,11 +10,26 @@ import numpy as np
 from numpy.random import randint
 import matplotlib.pyplot as plt
 
+# input data
+# one hot encoded sequence with eos
+x = list()
+# label
+y = list()
+token_repeated = list()
+pos_first_token = list()
+repeat_dist = list()
+max_seq_len = 26
+
+eos_seq_ip = [0] * (max_seq_len + 1)
+eos_seq_ip[-1] = 1
+
+eos_decoder = 2
+
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 num_to_letter = {}
-num_to_letter[0] = "eos"
+num_to_letter[26] = "eos"
 for num, letter in enumerate(alphabet):
-    num_to_letter[num + 1] = letter
+    num_to_letter[num] = letter
 
 def one_hot_decoding(alphabet, one_hot_ip):
 
@@ -43,7 +58,7 @@ def one_hot_encoding(sequence, letter_to_num):
 def generate_labels(sequence):
     new_list = list()
     seq_len = len(sequence)
-    label = [0]*seq_len
+    label = [0]*(seq_len+1)
     for num, letter in enumerate(sequence):
         #print(num, letter)
         if letter in new_list:
@@ -51,6 +66,7 @@ def generate_labels(sequence):
 
         new_list.append(letter)
 
+    label[seq_len] = eos_decoder
     return label
 
 
@@ -64,19 +80,24 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     """
     # repeat position - recency; random but be balanced accross dataset
 
-    seq_list = np.arange(1, seq_len+1)
+    seq_list = np.arange(0, seq_len)
     shuffle(seq_list)
-    seq_list = seq_list[:seq_len]
 
     if(positive):
-        first_pos = randint(0, seq_len-1)
+        first_pos = randint(0, seq_len)
+        #print("first position" + str(first_pos))
 
         if(first_pos == seq_len-1):
             # rare case when first pos is picked as the last pos in seq, then
             # force first pos to be 0.
             first_pos = 0
 
-        rep_pos = randint(first_pos+1, seq_len-1)
+        if(first_pos+1 == seq_len-1):
+            # rep pos for seq 2 is always fixed
+            rep_pos = 1
+        else:
+            rep_pos = randint(first_pos+1, seq_len-1)
+
         rep_dist = rep_pos-first_pos
         first_token_pos = first_pos
 
@@ -92,9 +113,23 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
 
     return seq_list, rep_token, first_token_pos, rep_dist
 
+def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist):
+    sequence_one_hot = []
+    for token in sequence:
+        seq_token = [0] * (max_seq_len + 1)
+        seq_token[token] = 1
+        sequence_one_hot.append(seq_token)
+    sequence_one_hot.append(eos_seq_ip)
+    x.append(sequence_one_hot)
 
-def generate_dataset(seq_len, repeat_dist,
-                     max_seq_len=26, num_tokens_rep=1, num_samples=26000):
+    label = generate_labels(sequence)
+    y.append(label)
+
+    token_repeated.append(rep_token)
+    pos_first_token.append(first_token_pos)
+    repeat_dist.append(rep_dist)
+
+def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     """
     :param num_samples:
     :param seq_len:
@@ -104,17 +139,15 @@ def generate_dataset(seq_len, repeat_dist,
     :param max_seq_len:
     :return:
     """
-    x = list()
-    y = list()
-    token_repeated = list()
-    pos_first_token = list()
-    repeat_dist = list()
+
+
     min_seq_len = 2
     num_repeat = 1
 
     for seq_len in range(min_seq_len, max_seq_len):
         #positive examples with repetion
-        num_samples = min((26*np.math.factorial(seq_len-1)), 5,000)
+        #print("seq_len is" + str(seq_len))
+        num_samples = min((26*np.math.factorial(seq_len-1)), 5000)
         for sample in range(num_samples):
             positive = 1
             sequence, rep_token, first_token_pos, rep_dist = generate_seq(seq_len,
@@ -122,19 +155,7 @@ def generate_dataset(seq_len, repeat_dist,
                                                                       num_tokens_rep,
                                                                        positive)
 
-            sequence_one_hot = []
-            for token in sequence:
-                seq_token = [0] * (max_seq_len + 1)
-                seq_token[token] = 1
-                sequence_one_hot.append(seq_token)
-            x.append(sequence_one_hot)
-
-            label = generate_labels(sequence)
-            y.append(label)
-
-            token_repeated.append(rep_token)
-            pos_first_token.append(first_token_pos)
-            repeat_dist.append(rep_dist)
+            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist)
 
             #negative samples
             positive = 0
@@ -143,28 +164,18 @@ def generate_dataset(seq_len, repeat_dist,
                                                                       num_tokens_rep,
                                                                        positive)
 
-            sequence_one_hot = []
-            for token in sequence:
-                seq_token = [0] * (max_seq_len + 1)
-                seq_token[token] = 1
-                sequence_one_hot.append(seq_token)
-            x.append(sequence_one_hot)
+            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist)
 
-            label = generate_labels(sequence)
-            y.append(label)
-            token_repeated.append(rep_token)
-            pos_first_token.append(first_token_pos)
-            repeat_dist.append(rep_dist)
+    return x, y, token_repeated, pos_first_token, repeat_dist
 
 
-    return x, y
-
-def decode_seq(x, y, num_samples, seq_len):
+def decode_seq(x, y):
     batch = []
+    num_samples = len(x)
     for sequence in range(num_samples):
-
+        num_tokens = len(x[sequence])
         seq = []
-        for token in range(seq_len):
+        for token in range(num_tokens):
             seq.append(one_hot_decoding(alphabet, x[sequence][token]))
         batch.append(seq)
 
@@ -174,20 +185,35 @@ def decode_seq(x, y, num_samples, seq_len):
         print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(
             seq_list[sample][1]))
 
-"""
-num_samples = 1000
-seq_len = 10
-num_repeat = 1
-repeat_dist = 2
+
+
 num_tokens_rep = 1
 max_seq_len = 26
 
-x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
-                     num_tokens_rep, max_seq_len)
+x, y, token_repeated, pos_first_token, repeat_dist = generate_dataset(max_seq_len,
+                                                                      num_tokens_rep)
 
-decode_seq(x,y, num_samples, seq_len)
+decode_seq(x,y)
 
-"""
+# Creating histogram
+plt.hist(token_repeated, bins = max_seq_len)
+
+# Show plot
+plt.show(block=True)
+
+# Creating histogram
+plt.hist(pos_first_token, bins = max_seq_len)
+
+# Show plot
+plt.show(block=True)
+
+# Creating histogram
+plt.hist(repeat_dist, bins = max_seq_len)
+
+# Show plot
+plt.show(block=True)
+
+
 
 """
 max_seq_len = 26
