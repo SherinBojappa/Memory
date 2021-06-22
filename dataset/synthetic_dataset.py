@@ -18,6 +18,7 @@ y = list()
 token_repeated = list()
 pos_first_token = list()
 repeat_dist = list()
+sequence_length = [0] * 27
 max_seq_len = 26
 
 eos_seq_ip = [0] * (max_seq_len + 1)
@@ -138,6 +139,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
         num_samples = min((26*np.math.factorial(seq_len-1)), 5000)
+        sequence_length[seq_len] = num_samples*2
         for sample in range(num_samples):
             positive = 1
             sequence, rep_token, first_token_pos, rep_dist = generate_seq(seq_len,
@@ -191,21 +193,44 @@ plt.xlabel("Letter repeated")
 plt.ylabel("Number of samples in which token is repeated")
 # Creating histogram
 plt.hist(token_repeated, bins = max_seq_len)
-
+plt.savefig("tokens repeated histogram")
 # Show plot
-plt.show(block=True)
+#plt.show(block=True)
+
+plt.figure()
+plt.title("histogram of position of first token")
+plt.axis([0, 27, 0, 10000])
+#plt.hist(pos_first_token[sequence_length[1]:sequence_length[2]], bins=max_seq_len)
+start_index = 0
+end_index = 0
+for i in range(24):
+    start_index = start_index+sequence_length[i+1]
+    end_index = end_index+sequence_length[i+2]
+
+    plt.hist(pos_first_token[start_index:end_index:2], bins=max_seq_len)
+    plt.savefig("position of first token for squence length" + str(i+2))
+    plt.clf()
+#plt.show(block=True)
+
+plt.figure()
+plt.title("Histogram of number of intermediate tokens")
+plt.axis([0, 27, 0, 10000])
+start_index = 0
+end_index = 0
+for i in range(24):
+    start_index = start_index+sequence_length[i+1]
+    end_index = end_index + sequence_length[i+2]
+
+    plt.hist(repeat_dist[start_index:end_index:2], bins=max_seq_len)
+    plt.savefig("repeat distance for squence length" + str(i+2))
+    plt.clf()
+
 
 # Creating histogram
-plt.hist(pos_first_token, bins = max_seq_len)
+#plt.hist(repeat_dist, bins = max_seq_len)
 
 # Show plot
-plt.show(block=True)
-
-# Creating histogram
-plt.hist(repeat_dist, bins = max_seq_len)
-
-# Show plot
-plt.show(block=True)
+#plt.show(block=True)
 
 
 
