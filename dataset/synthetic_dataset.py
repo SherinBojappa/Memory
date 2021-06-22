@@ -185,6 +185,10 @@ x, y, token_repeated, pos_first_token, repeat_dist = generate_dataset(max_seq_le
 
 decode_seq(x,y)
 
+plt.figure()
+plt.title("Histogram of the tokens repeated")
+plt.xlabel("Letter repeated")
+plt.ylabel("Number of samples in which token is repeated")
 # Creating histogram
 plt.hist(token_repeated, bins = max_seq_len)
 
