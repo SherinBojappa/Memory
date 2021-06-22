@@ -80,29 +80,19 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     """
     # repeat position - recency; random but be balanced accross dataset
 
-    seq_list = np.arange(0, seq_len)
+    seq_list = np.arange(0, 26)
     shuffle(seq_list)
+    seq_list = seq_list[:seq_len]
 
     if(positive):
-        first_pos = randint(0, seq_len)
-        #print("first position" + str(first_pos))
+        # randomly generate first repeat position and the repeat position
+        first_pos, rep_pos = randint(0, seq_len, 2)
+        seq_list[rep_pos] = seq_list[first_pos]
 
-        if(first_pos == seq_len-1):
-            # rare case when first pos is picked as the last pos in seq, then
-            # force first pos to be 0.
-            first_pos = 0
-
-        if(first_pos+1 == seq_len-1):
-            # rep pos for seq 2 is always fixed
-            rep_pos = 1
-        else:
-            rep_pos = randint(first_pos+1, seq_len-1)
-
-        rep_dist = rep_pos-first_pos
+        rep_dist = np.abs(rep_pos-first_pos)
         first_token_pos = first_pos
 
         rep_token = seq_list[first_pos]
-        seq_list[rep_pos] = seq_list[first_pos]
 
     else:
         # none of the tokens are repeating
