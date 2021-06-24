@@ -113,6 +113,7 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
                 print(seq_len)
                 raise Exception("first position negative")
         else:
+            # number of intervening symbols = rep_dist-1
             rep_pos = first_pos + rep_dist
         rep_token = seq_list[first_pos]
 
@@ -162,7 +163,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     min_seq_len = 2
     num_repeat = 1
 
-    for seq_len in range(min_seq_len, max_seq_len):
+    for seq_len in range(min_seq_len, max_seq_len+1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
         num_samples = min((26*np.math.factorial(seq_len-1)), 5000)
@@ -238,7 +239,8 @@ plt.close()
 # Switching to the OO-interface. You can do all of this with "plt" as well.
 start_index = 0
 end_index = 0
-for i in range(2, 26):
+
+for i in range(2, 27):
     # sequence length doesnt count the negative samples
     start_index = start_index + sequence_length[i-1]
     end_index = end_index + sequence_length[i]
@@ -255,7 +257,7 @@ for i in range(2, 26):
 #plt.hist(pos_first_token[sequence_length[1]:sequence_length[2]], bins=max_seq_len)
 start_index = 0
 end_index = 0
-for i in range(2, 26):
+for i in range(2, 27):
     start_index = start_index+sequence_length[i-1]
     end_index = end_index+sequence_length[i]
     fig, ax = plt.subplots()
@@ -273,7 +275,7 @@ for i in range(2, 26):
 
 start_index = 0
 end_index = 0
-for i in range(2, 26):
+for i in range(2, 27):
     start_index = start_index+sequence_length[i-1]
     end_index = end_index + sequence_length[i]
     fig, ax = plt.subplots()
@@ -286,41 +288,5 @@ for i in range(2, 26):
     plt.savefig("Repeat distance : seq_len" + str(i))
     plt.close()
 
-
-# Creating histogram
-#plt.hist(repeat_dist, bins = max_seq_len)
-
-# Show plot
-#plt.show(block=True)
-
-
-
-"""
-max_seq_len = 26
-x_axis = range(0, max_seq_len)
-token_list = []
-seq_batch = []
-seq_len=10
-num_repeat=1
-repeat_dist=5
-num_tokens_rep=1
-max_seq_len=26
-for iter in range(10000):
-    seq_list, rep_token = generate_sequence(seq_len, num_repeat, repeat_dist,
-                                            num_tokens_rep, max_seq_len)
-    #print(rep_token)
-    token_list.append(rep_token)
-    #print(seq_list)
-    #print(token_list)
-
-#print(token_list)
-
-
-# Creating histogram
-plt.hist(token_list, bins = max_seq_len)
-
-# Show plot
-plt.show(block=True)
-"""
 
 

@@ -72,8 +72,8 @@ if input_seq == 'default':
     input_token_index = dict([(char, i) for i, char in enumerate(input_characters)])
     target_token_index = dict([(char, i) for i, char in enumerate(target_characters)])
 
-    encoder_input_data = np.zeros(
-        (len(input_texts), max_encoder_seq_length, num_encoder_tokens), dtype="float32"
+    encoder_input_data = np.zeros(num_encoder_tokens
+        (len(input_texts), max_encoder_seq_length, ), dtype="float32"
     )
     decoder_input_data = np.zeros(
         (len(input_texts), max_decoder_seq_length, num_decoder_tokens), dtype="float32"
