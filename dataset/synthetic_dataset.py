@@ -1,7 +1,7 @@
 """
 Generation of synthetic dataset to evaluate memory retention in neural models
 """
-
+import random
 from string import ascii_lowercase
 from random import choice
 from random import randrange
@@ -18,6 +18,7 @@ y = list()
 token_repeated = list()
 pos_first_token = list()
 repeat_dist = list()
+repeat_position = list()
 sequence_length = [0] * 27
 max_seq_len = 26
 
@@ -87,24 +88,49 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
 
     if(positive):
         # randomly generate first repeat position and the repeat position
-        first_pos, rep_pos = randint(0, seq_len, 2)
+        #first_pos, rep_pos = randint(0, seq_len, 2)
+        #first_pos, rep_pos = random.sample(range(0, seq_len), 2)
+
+        first_pos = randint(0, seq_len)
+        rep_dist = randint(1, seq_len)
+        if first_pos + rep_dist >= seq_len:
+            #return None, None, None, None, None
+            #first_pos = 0
+            rep_pos = first_pos
+            first_pos = rep_pos - rep_dist
+            while(first_pos < 0):
+                first_pos = randint(0, seq_len)
+                if first_pos + rep_dist >= seq_len:
+                    # return None, None, None, None, None
+                    # first_pos = 0
+                    rep_pos = first_pos
+                    first_pos = rep_pos - rep_dist
+
+            if(first_pos < 0):
+                print(first_pos)
+                print(rep_dist)
+                print(rep_pos)
+                print(seq_len)
+                raise Exception("first position negative")
+        else:
+            rep_pos = first_pos + rep_dist
+        rep_token = seq_list[first_pos]
+
         seq_list[rep_pos] = seq_list[first_pos]
 
-        rep_dist = np.abs(rep_pos-first_pos)
         first_token_pos = first_pos
-
-        rep_token = seq_list[first_pos]
 
     else:
         # none of the tokens are repeating
         rep_token = -1
         first_token_pos = -1
         rep_dist = -1
+        rep_pos = -1
 
 
-    return seq_list, rep_token, first_token_pos, rep_dist
+    return seq_list, rep_token, first_token_pos, rep_dist, rep_pos
 
-def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist):
+def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos):
     sequence_one_hot = []
     for token in sequence:
         seq_token = [0] * (max_seq_len + 1)
@@ -119,6 +145,7 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist):
     token_repeated.append(rep_token)
     pos_first_token.append(first_token_pos)
     repeat_dist.append(rep_dist)
+    repeat_position.append(rep_pos)
 
 def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     """
@@ -142,23 +169,24 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
         sequence_length[seq_len] = num_samples*2
         for sample in range(num_samples):
             positive = 1
-            sequence, rep_token, first_token_pos, rep_dist = generate_seq(seq_len,
+            sequence, rep_token, first_token_pos, rep_dist, rep_pos = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
                                                                        positive)
 
-            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist)
+            if sequence is not None:
+                aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos)
 
             #negative samples
             positive = 0
-            sequence, rep_token, first_token_pos, rep_dist = generate_seq(seq_len,
+            sequence, rep_token, first_token_pos, rep_dist, rep_pos = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
                                                                        positive)
 
-            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist)
+            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos)
 
-    return x, y, token_repeated, pos_first_token, repeat_dist
+    return x, y, token_repeated, pos_first_token, repeat_dist, repeat_position
 
 
 def decode_seq(x, y):
@@ -182,48 +210,81 @@ def decode_seq(x, y):
 num_tokens_rep = 1
 max_seq_len = 26
 
-x, y, token_repeated, pos_first_token, repeat_dist = generate_dataset(max_seq_len,
+x, y, token_repeated, pos_first_token, repeat_dist, repeat_position = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
 
 decode_seq(x,y)
 
+
 plt.figure()
+
+
+
+counts = np.bincount(np.array(token_repeated)[np.array(token_repeated)>=0])
+
+# Switching to the OO-interface. You can do all of this with "plt" as well.
+fig, ax = plt.subplots()
 plt.title("Histogram of the tokens repeated")
 plt.xlabel("Letter repeated")
 plt.ylabel("Number of samples in which token is repeated")
-# Creating histogram
-plt.hist(token_repeated, bins = max_seq_len)
-plt.savefig("tokens repeated histogram")
+ax.bar(range(26), counts, width=1, align='center',edgecolor = 'black')
+ax.set(xticks=range(27), xlim=[-1, 26])
+plt.savefig("Tokens histogram")
+plt.close()
 # Show plot
 #plt.show(block=True)
 
-plt.figure()
-plt.title("histogram of position of first token")
-plt.axis([0, 27, 0, 10000])
+
+# Switching to the OO-interface. You can do all of this with "plt" as well.
+start_index = 0
+end_index = 0
+for i in range(2, 26):
+    # sequence length doesnt count the negative samples
+    start_index = start_index + sequence_length[i-1]
+    end_index = end_index + sequence_length[i]
+    fig, ax = plt.subplots()
+    plt.title("First position histogram: seq_len" + str(i))
+    plt.xlabel("first position of repeated token")
+    plt.ylabel("Number of samples")
+    counts = np.bincount(np.array(pos_first_token[start_index:end_index:2]).astype('int64'))
+    ax.bar(np.arange(i-1), counts, width=1, align='center', edgecolor='black')
+    ax.set(xticks=np.arange(i-1), xlim=[0, 26])
+    plt.savefig("First token position : seq_len" + str(i))
+    plt.close()
+
 #plt.hist(pos_first_token[sequence_length[1]:sequence_length[2]], bins=max_seq_len)
 start_index = 0
 end_index = 0
-for i in range(24):
-    start_index = start_index+sequence_length[i+1]
-    end_index = end_index+sequence_length[i+2]
-
-    plt.hist(pos_first_token[start_index:end_index:2], bins=max_seq_len)
-    plt.savefig("position of first token for squence length" + str(i+2))
-    plt.clf()
+for i in range(2, 26):
+    start_index = start_index+sequence_length[i-1]
+    end_index = end_index+sequence_length[i]
+    fig, ax = plt.subplots()
+    plt.title("Repeat position histogram: seq_len" + str(i))
+    plt.xlabel("repeat position of token")
+    plt.ylabel("Number of samples")
+    counts = np.bincount(np.array(repeat_position[start_index:end_index:2]).astype('int64'))
+    ax.bar(np.arange(i), counts, width=1, align='center', edgecolor='black')
+    ax.set(xticks=np.arange(i), xlim=[0, 26])
+    plt.savefig("Repeat token position : seq_len" + str(i))
+    plt.close()
 #plt.show(block=True)
 
-plt.figure()
-plt.title("Histogram of number of intermediate tokens")
-plt.axis([0, 27, 0, 10000])
+
+
 start_index = 0
 end_index = 0
-for i in range(24):
-    start_index = start_index+sequence_length[i+1]
-    end_index = end_index + sequence_length[i+2]
-
-    plt.hist(repeat_dist[start_index:end_index:2], bins=max_seq_len)
-    plt.savefig("repeat distance for squence length" + str(i+2))
-    plt.clf()
+for i in range(2, 26):
+    start_index = start_index+sequence_length[i-1]
+    end_index = end_index + sequence_length[i]
+    fig, ax = plt.subplots()
+    plt.title("Repeat distance histogram : seq_len" + str(i))
+    plt.xlabel("distance between the repeated tokens")
+    plt.ylabel("Number of samples")
+    counts = np.bincount(np.array(repeat_dist[start_index:end_index:2]).astype('int64'))
+    ax.bar(np.arange(i), counts, width=1, align='center', edgecolor='black')
+    ax.set(xticks=np.arange(i), xlim=[0, 26])
+    plt.savefig("Repeat distance : seq_len" + str(i))
+    plt.close()
 
 
 # Creating histogram
