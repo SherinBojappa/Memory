@@ -207,6 +207,74 @@ def decode_seq(x, y):
             seq_list[sample][1]))
 
 
+def plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position):
+    plt.figure()
+    counts = np.bincount(np.array(token_repeated)[np.array(token_repeated)>=0])
+
+    # Switching to the OO-interface. You can do all of this with "plt" as well.
+    fig, ax = plt.subplots()
+    plt.title("Histogram of the tokens repeated")
+    plt.xlabel("Letter repeated")
+    plt.ylabel("Number of samples in which token is repeated")
+    ax.bar(range(26), counts, width=1, align='center',edgecolor = 'black')
+    ax.set(xticks=range(27), xlim=[-1, 26])
+    plt.savefig("Tokens histogram")
+    plt.close()
+    # Show plot
+    #plt.show(block=True)
+
+
+    # Switching to the OO-interface. You can do all of this with "plt" as well.
+    start_index = 0
+    end_index = 0
+
+    for i in range(2, 27):
+        # sequence length doesnt count the negative samples
+        start_index = start_index + sequence_length[i-1]
+        end_index = end_index + sequence_length[i]
+        fig, ax = plt.subplots()
+        plt.title("First position histogram: seq_len" + str(i))
+        plt.xlabel("first position of repeated token")
+        plt.ylabel("Number of samples")
+        counts = np.bincount(np.array(pos_first_token[start_index:end_index:2]).astype('int64'))
+        ax.bar(np.arange(i-1), counts, width=1, align='center', edgecolor='black')
+        ax.set(xticks=np.arange(i-1), xlim=[0, 26])
+        plt.savefig("First token position : seq_len" + str(i))
+        plt.close()
+
+    #plt.hist(pos_first_token[sequence_length[1]:sequence_length[2]], bins=max_seq_len)
+    start_index = 0
+    end_index = 0
+    for i in range(2, 27):
+        start_index = start_index+sequence_length[i-1]
+        end_index = end_index+sequence_length[i]
+        fig, ax = plt.subplots()
+        plt.title("Repeat position histogram: seq_len" + str(i))
+        plt.xlabel("repeat position of token")
+        plt.ylabel("Number of samples")
+        counts = np.bincount(np.array(repeat_position[start_index:end_index:2]).astype('int64'))
+        ax.bar(np.arange(i), counts, width=1, align='center', edgecolor='black')
+        ax.set(xticks=np.arange(i), xlim=[0, 26])
+        plt.savefig("Repeat token position : seq_len" + str(i))
+        plt.close()
+    #plt.show(block=True)
+
+
+
+    start_index = 0
+    end_index = 0
+    for i in range(2, 27):
+        start_index = start_index+sequence_length[i-1]
+        end_index = end_index + sequence_length[i]
+        fig, ax = plt.subplots()
+        plt.title("Repeat distance histogram : seq_len" + str(i))
+        plt.xlabel("distance between the repeated tokens")
+        plt.ylabel("Number of samples")
+        counts = np.bincount(np.array(repeat_dist[start_index:end_index:2]).astype('int64'))
+        ax.bar(np.arange(i), counts, width=1, align='center', edgecolor='black')
+        ax.set(xticks=np.arange(i), xlim=[0, 26])
+        plt.savefig("Repeat distance : seq_len" + str(i))
+        plt.close()
 
 num_tokens_rep = 1
 max_seq_len = 26
@@ -216,77 +284,5 @@ x, y, token_repeated, pos_first_token, repeat_dist, repeat_position = generate_d
 
 decode_seq(x,y)
 
-
-plt.figure()
-
-
-
-counts = np.bincount(np.array(token_repeated)[np.array(token_repeated)>=0])
-
-# Switching to the OO-interface. You can do all of this with "plt" as well.
-fig, ax = plt.subplots()
-plt.title("Histogram of the tokens repeated")
-plt.xlabel("Letter repeated")
-plt.ylabel("Number of samples in which token is repeated")
-ax.bar(range(26), counts, width=1, align='center',edgecolor = 'black')
-ax.set(xticks=range(27), xlim=[-1, 26])
-plt.savefig("Tokens histogram")
-plt.close()
-# Show plot
-#plt.show(block=True)
-
-
-# Switching to the OO-interface. You can do all of this with "plt" as well.
-start_index = 0
-end_index = 0
-
-for i in range(2, 27):
-    # sequence length doesnt count the negative samples
-    start_index = start_index + sequence_length[i-1]
-    end_index = end_index + sequence_length[i]
-    fig, ax = plt.subplots()
-    plt.title("First position histogram: seq_len" + str(i))
-    plt.xlabel("first position of repeated token")
-    plt.ylabel("Number of samples")
-    counts = np.bincount(np.array(pos_first_token[start_index:end_index:2]).astype('int64'))
-    ax.bar(np.arange(i-1), counts, width=1, align='center', edgecolor='black')
-    ax.set(xticks=np.arange(i-1), xlim=[0, 26])
-    plt.savefig("First token position : seq_len" + str(i))
-    plt.close()
-
-#plt.hist(pos_first_token[sequence_length[1]:sequence_length[2]], bins=max_seq_len)
-start_index = 0
-end_index = 0
-for i in range(2, 27):
-    start_index = start_index+sequence_length[i-1]
-    end_index = end_index+sequence_length[i]
-    fig, ax = plt.subplots()
-    plt.title("Repeat position histogram: seq_len" + str(i))
-    plt.xlabel("repeat position of token")
-    plt.ylabel("Number of samples")
-    counts = np.bincount(np.array(repeat_position[start_index:end_index:2]).astype('int64'))
-    ax.bar(np.arange(i), counts, width=1, align='center', edgecolor='black')
-    ax.set(xticks=np.arange(i), xlim=[0, 26])
-    plt.savefig("Repeat token position : seq_len" + str(i))
-    plt.close()
-#plt.show(block=True)
-
-
-
-start_index = 0
-end_index = 0
-for i in range(2, 27):
-    start_index = start_index+sequence_length[i-1]
-    end_index = end_index + sequence_length[i]
-    fig, ax = plt.subplots()
-    plt.title("Repeat distance histogram : seq_len" + str(i))
-    plt.xlabel("distance between the repeated tokens")
-    plt.ylabel("Number of samples")
-    counts = np.bincount(np.array(repeat_dist[start_index:end_index:2]).astype('int64'))
-    ax.bar(np.arange(i), counts, width=1, align='center', edgecolor='black')
-    ax.set(xticks=np.arange(i), xlim=[0, 26])
-    plt.savefig("Repeat distance : seq_len" + str(i))
-    plt.close()
-
-
+plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position)
 
