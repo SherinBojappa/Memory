@@ -3,7 +3,8 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from dataset.memory_dataset_generation import *
+#from dataset.memory_dataset_generation import *
+from dataset.synthetic_dataset import *
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import classification_report
@@ -13,130 +14,69 @@ from sklearn.metrics import classification_report
 batch_size = 64  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 5
+epochs = 1
 latent_dim = 256  # Latent dimensionality of the encoding space.
-#num_samples = 10000  # Number of samples to train on.
-num_samples = 10000
 # Path to the data txt file on disk.
 data_path = "fra.txt"
-#input_seq = 'default'
 input_seq = 'synthetic'
 seq_len = 4
 num_repeat = 1
 repeat_dist = 1
 num_tokens_rep = 1
-# max seq len = 26+eos
-max_seq_len = 27
-eos_encoder = np.zeros(max_seq_len)
+max_seq_len = 26
+eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
 verbose = 0
 
+x, y, token_repeated, pos_first_token, repeat_dist, repeat_position = generate_dataset(max_seq_len,
+                                                                      num_tokens_rep)
 
-if input_seq == 'default':
-    # Vectorize the data.
-    input_texts = []
-    target_texts = []
-    input_characters = set()
-    target_characters = set()
-    with open(data_path, "r", encoding="utf-8") as f:
-        lines = f.read().split("\n")
-    for line in lines[: min(num_samples, len(lines) - 1)]:
-        input_text, target_text, _ = line.split("\t")
-        # We use "tab" as the "start sequence" character
-        # for the targets, and "\n" as "end sequence" character.
-        target_text = "\t" + target_text + "\n"
-        input_texts.append(input_text)
-        target_texts.append(target_text)
-        for char in input_text:
-            if char not in input_characters:
-                input_characters.add(char)
-        for char in target_text:
-            if char not in target_characters:
-                target_characters.add(char)
+# plots on the properties of the generated sequences
+plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position)
 
-    input_characters = sorted(list(input_characters))
-    target_characters = sorted(list(target_characters))
-    num_encoder_tokens = len(input_characters)
-    num_decoder_tokens = len(target_characters)
-    max_encoder_seq_length = max([len(txt) for txt in input_texts])
-    max_decoder_seq_length = max([len(txt) for txt in target_texts])
+num_samples = len(x)
+print("The total number of samples in the dataset is " + str(num_samples))
 
-    print("Number of samples:", len(input_texts))
-    print("Number of unique input tokens:", num_encoder_tokens)
-    print("Number of unique output tokens:", num_decoder_tokens)
-    print("Max sequence length for inputs:", max_encoder_seq_length)
-    print("Max sequence length for outputs:", max_decoder_seq_length)
+# decoder tokens = 0,1,eos
+num_decoder_tokens = 3
+# encoder tokens = 26 tokens in alphabet + eos
+num_encoder_tokens = max_seq_len+1
 
-    input_token_index = dict([(char, i) for i, char in enumerate(input_characters)])
-    target_token_index = dict([(char, i) for i, char in enumerate(target_characters)])
+# the data x,y already have eos appended to them
+max_encoder_seq_length = max([len(seq) for seq in x])
+max_decoder_seq_length = max([len(seq) for seq in y])
+print("Max encoder length" + str(max_encoder_seq_length))
+print("Max decoder length" + str(max_decoder_seq_length))
 
-    encoder_input_data = np.zeros(num_encoder_tokens
-        (len(input_texts), max_encoder_seq_length, ), dtype="float32"
-    )
-    decoder_input_data = np.zeros(
-        (len(input_texts), max_decoder_seq_length, num_decoder_tokens), dtype="float32"
-    )
-    decoder_target_data = np.zeros(
-        (len(input_texts), max_decoder_seq_length, num_decoder_tokens), dtype="float32"
-    )
+# seq len + 1 for alphabet + eos
+encoder_input_data = np.zeros((num_samples, max_encoder_seq_length,
+                               num_encoder_tokens), dtype="float32")
+# decoder_input data - sos in the beginning to indicate start of sentence
+# decoder_target_data - does not have sos in the beginning but same size as
+# decoder_input data so that assignments do not have issues.
+# eos is already included in the decoder data
+decoder_input_data = np.zeros((num_samples, max_decoder_seq_length+1, 3),
+                              dtype="float32")
+decoder_target_data = np.zeros((num_samples, max_decoder_seq_length+1, 3),
+                               dtype="float32")
 
-    for i, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
-        for t, char in enumerate(input_text):
-            encoder_input_data[i, t, input_token_index[char]] = 1.0
-        encoder_input_data[i, t + 1 :, input_token_index[" "]] = 1.0
-        for t, char in enumerate(target_text):
-            # decoder_target_data is ahead of decoder_input_data by one timestep
-            decoder_input_data[i, t, target_token_index[char]] = 1.0
-            if t > 0:
-                # decoder_target_data will be ahead by one timestep
-                # and will not include the start character.
-                decoder_target_data[i, t - 1, target_token_index[char]] = 1.0
-        decoder_input_data[i, t + 1 :, target_token_index[" "]] = 1.0
-        decoder_target_data[i, t:, target_token_index[" "]] = 1.0
-else:
+if(verbose == 1):
+    decode_seq(x, y)
 
-    num_decoder_tokens = 3
-    num_encoder_tokens = max_seq_len
-    # seq len + 1 for alphabet + eos
-    encoder_input_data = np.zeros((num_samples, seq_len+1, max_seq_len),
-                                      dtype="float32")
-    # seq len + 2 for alphabet + eos + sos for input_data
-    # seq len + 2 for alphabet + eos; neglect last token
-    decoder_input_data = np.zeros((num_samples, seq_len+2, 3), dtype="float32")
-    decoder_target_data = np.zeros((num_samples, seq_len+2, 3), dtype="float32")
+one_hot_encoding_label = np.array([[1,0,0], [0,1,0], [0,0,1], [1,1,1]])
 
-    x, y = generate_dataset(num_samples, seq_len, num_repeat, repeat_dist,
-                                num_tokens_rep, max_seq_len-1)
-
-    if(verbose == 1):
-        decode_seq(x, y, num_samples, seq_len)
-
-    one_hot_encoding_label = np.array([[1,0,0], [0,1,0], [0,0,1], [1,1,1]])
-
-    for i in range(num_samples):
-        for seq in range(seq_len+1):
-            # sos for decoder_input_data
-            if seq == 0:
-                decoder_input_data[i, seq] = one_hot_encoding_label[sos_decoder]
-                encoder_input_data[i, seq] = x[i][seq]
-            # generic case
-            elif seq != seq_len:
-                encoder_input_data[i, seq] = x[i][seq]
-                # adjust for sos
-                decoder_input_data[i, seq] = one_hot_encoding_label[y[i][seq-1]]
-                # decoder target data lags decoder input by 1
-                if (seq > 0):
-                    decoder_target_data[i, seq-1] = decoder_input_data[i, seq]
-            # append eos
-            if seq == seq_len:
-                encoder_input_data[i, seq] = eos_encoder
-                decoder_input_data[i, seq] = one_hot_encoding_label[y[i][seq-1]]
-                decoder_input_data[i, seq+1] = one_hot_encoding_label[eos_decoder]
-
-                decoder_target_data[i, seq-1] = decoder_input_data[i, seq]
-                decoder_target_data[i, seq] = one_hot_encoding_label[eos_decoder]
+for i in range(num_samples):
+    seq_len = len(x[i])
+    for seq in range(seq_len):
+        # sos for decoder_input_data
+        if seq == 0:
+            decoder_input_data[i, seq] = one_hot_encoding_label[sos_decoder]
+        encoder_input_data[i, seq] = x[i][seq]
+        decoder_input_data[i, seq+1] = one_hot_encoding_label[y[i][seq]]
+        # decoder target data lags decoder input by 1
+        decoder_target_data[i, seq] = decoder_input_data[i, seq+1]
 
 # train test split
 num_train = 0.8*encoder_input_data.shape[0]
@@ -211,121 +151,70 @@ decoder_model = keras.Model(
     [decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states
 )
 
-if input_seq == 'default':
-    # Reverse-lookup token index to decode sequences back to
-    # something readable.
-    reverse_input_char_index = dict((i, char) for char, i in input_token_index.items())
-    reverse_target_char_index = dict((i, char) for char, i in target_token_index.items())
+reverse_target_char_index = [0,1,2,3]
+def decode_sequence(input_seq):
+    # Encode the input as state vectors.
+    states_value = encoder_model.predict(input_seq)
 
+    # Generate empty target sequence of length 1.
+    target_seq = np.zeros((1, 1, 3))
+    # Populate the first character of target sequence with the start character.
+    target_seq[0,0:] = one_hot_encoding_label[sos_decoder]
+    #target_seq[0, 0, target_token_index["\t"]] = 1.0
 
-    def decode_sequence(input_seq):
-        # Encode the input as state vectors.
-        states_value = encoder_model.predict(input_seq)
+    # Sampling loop for a batch of sequences
+    # (to simplify, here we assume a batch of size 1).
+    stop_condition = False
+    decoded_sentence = ""
+    while not stop_condition:
+        output_tokens, h, c = decoder_model.predict(
+            [target_seq] + states_value)
 
-        # Generate empty target sequence of length 1.
-        target_seq = np.zeros((1, 1, num_decoder_tokens))
-        # Populate the first character of target sequence with the start character.
-        target_seq[0, 0, target_token_index["\t"]] = 1.0
+        # Sample a token
+        sampled_token_index = np.argmax(output_tokens[0, -1, :])
+        sampled_char = str(reverse_target_char_index[sampled_token_index])
+        decoded_sentence += sampled_char
 
-        # Sampling loop for a batch of sequences
-        # (to simplify, here we assume a batch of size 1).
-        stop_condition = False
-        decoded_sentence = ""
-        while not stop_condition:
-            output_tokens, h, c = decoder_model.predict([target_seq] + states_value)
+        # Exit condition: either hit max length
+        # or find stop character.
+        if sampled_char == eos_decoder or len(
+                decoded_sentence) > seq_len:
+            stop_condition = True
 
-            # Sample a token
-            sampled_token_index = np.argmax(output_tokens[0, -1, :])
-            sampled_char = reverse_target_char_index[sampled_token_index]
-            decoded_sentence += sampled_char
-
-            # Exit condition: either hit max length
-            # or find stop character.
-            if sampled_char == "\n" or len(decoded_sentence) > max_decoder_seq_length:
-                stop_condition = True
-
-            # Update the target sequence (of length 1).
-            target_seq = np.zeros((1, 1, num_decoder_tokens))
-            target_seq[0, 0, sampled_token_index] = 1.0
-
-            # Update states
-            states_value = [h, c]
-        return decoded_sentence
-
-    for seq_index in range(20):
-        # Take one sequence (part of the training set)
-        # for trying out decoding.
-        input_seq = encoder_input_data[seq_index : seq_index + 1]
-        decoded_sentence = decode_sequence(input_seq)
-        print("-")
-        print("Input sentence:", input_texts[seq_index])
-        print("Decoded sentence:", decoded_sentence)
-
-else:
-    reverse_target_char_index = [0,1,2,3]
-    def decode_sequence(input_seq):
-        # Encode the input as state vectors.
-        states_value = encoder_model.predict(input_seq)
-
-        # Generate empty target sequence of length 1.
+        # Update the target sequence (of length 1).
         target_seq = np.zeros((1, 1, 3))
-        # Populate the first character of target sequence with the start character.
-        target_seq[0,0:] = one_hot_encoding_label[sos_decoder]
-        #target_seq[0, 0, target_token_index["\t"]] = 1.0
+        target_seq[0, 0, :] = one_hot_encoding_label[sampled_token_index]
 
-        # Sampling loop for a batch of sequences
-        # (to simplify, here we assume a batch of size 1).
-        stop_condition = False
-        decoded_sentence = ""
-        while not stop_condition:
-            output_tokens, h, c = decoder_model.predict(
-                [target_seq] + states_value)
+        # Update states
+        states_value = [h, c]
+    return decoded_sentence
 
-            # Sample a token
-            sampled_token_index = np.argmax(output_tokens[0, -1, :])
-            sampled_char = str(reverse_target_char_index[sampled_token_index])
-            decoded_sentence += sampled_char
+y_pred = np.zeros((len(encoder_input_data_test), seq_len+2, 3), dtype="float32")
 
-            # Exit condition: either hit max length
-            # or find stop character.
-            if sampled_char == eos_decoder or len(
-                    decoded_sentence) > seq_len:
-                stop_condition = True
-
-            # Update the target sequence (of length 1).
-            target_seq = np.zeros((1, 1, 3))
-            target_seq[0, 0, :] = one_hot_encoding_label[sampled_token_index]
-
-            # Update states
-            states_value = [h, c]
-        return decoded_sentence
-
-    y_pred = np.zeros((len(encoder_input_data_test), seq_len+2, 3), dtype="float32")
-
-    one_hot_encoding_label = np.array(
-        [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
-    for seq_index in range(len(encoder_input_data_test)):
-        # Take one sequence (part of the training set)
-        # for trying out decoding.
-        input_seq = encoder_input_data_test[seq_index: seq_index + 1]
-        decoded_sentence = decode_sequence(input_seq)
-        val_one_hot = np.zeros((1,seq_len+2,3),dtype="float32")
-        for num, val in enumerate(decoded_sentence):
-            val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
-        y_pred[seq_index:seq_index+1] = val_one_hot
-        """
-        print("-")
-        print("Decoded sentence:", decoded_sentence)
-        seq = []
-        for num in range(seq_len):
-            seq.append(one_hot_decoding(alphabet, input_seq[0][num][:]))
-        print("Input sentence:", seq)
-        """
-    print("Balanced accuracy of test set")
-    y_true = decoder_target_data_test.argmax(axis=2).ravel()
-    y_est = y_pred.argmax(axis=2).ravel()
-    print(balanced_accuracy_score(y_true, y_est))
-    print(classification_report(y_true, y_est))
+one_hot_encoding_label = np.array(
+    [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
+for seq_index in range(len(encoder_input_data_test)):
+    # Take one sequence (part of the training set)
+    # for trying out decoding.
+    input_seq = encoder_input_data_test[seq_index: seq_index + 1]
+    decoded_sentence = decode_sequence(input_seq)
+    val_one_hot = np.zeros((1,seq_len+2,3),dtype="float32")
+    for num, val in enumerate(decoded_sentence):
+        val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
+    y_pred[seq_index:seq_index+1] = val_one_hot
+    """
+    print("-")
+    print("Decoded sentence:", decoded_sentence)
+    seq = []
+    for num in range(seq_len):
+        seq.append(one_hot_decoding(alphabet, input_seq[0][num][:]))
+    print("Input sentence:", seq)
+    """
+print("Balanced accuracy of test set")
+y_true = decoder_target_data_test.argmax(axis=2).ravel()
+y_est = y_pred.argmax(axis=2).ravel()
+print(balanced_accuracy_score(y_true, y_est))
+print(classification_report(y_true, y_est))
 
 
 

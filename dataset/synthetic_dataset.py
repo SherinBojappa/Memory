@@ -276,6 +276,8 @@ def plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_positio
         plt.savefig("Repeat distance : seq_len" + str(i))
         plt.close()
 
+
+"""
 num_tokens_rep = 1
 max_seq_len = 26
 
@@ -286,3 +288,4 @@ decode_seq(x,y)
 
 plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position)
 
+"""
