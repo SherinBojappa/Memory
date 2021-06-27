@@ -19,6 +19,7 @@ token_repeated = list()
 pos_first_token = list()
 repeat_dist = list()
 repeat_position = list()
+sequence_len = list()
 sequence_length = [0] * 27
 max_seq_len = 26
 
@@ -129,9 +130,9 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
         rep_pos = -1
 
 
-    return seq_list, rep_token, first_token_pos, rep_dist, rep_pos
+    return seq_list, rep_token, first_token_pos, rep_dist, rep_pos, seq_len
 
-def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos):
+def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos, seq_len):
     sequence_one_hot = []
     for token in sequence:
         seq_token = [0] * (max_seq_len + 1)
@@ -147,6 +148,7 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos):
     pos_first_token.append(first_token_pos)
     repeat_dist.append(rep_dist)
     repeat_position.append(rep_pos)
+    sequence_len.append(seq_len)
 
 def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     """
@@ -170,24 +172,24 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
         sequence_length[seq_len] = num_samples*2
         for sample in range(num_samples):
             positive = 1
-            sequence, rep_token, first_token_pos, rep_dist, rep_pos = generate_seq(seq_len,
+            sequence, rep_token, first_token_pos, rep_dist, rep_pos, seq_len = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
                                                                        positive)
 
             if sequence is not None:
-                aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos)
+                aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos, seq_len)
 
             #negative samples
             positive = 0
-            sequence, rep_token, first_token_pos, rep_dist, rep_pos = generate_seq(seq_len,
+            sequence, rep_token, first_token_pos, rep_dist, rep_pos, seq_len = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
                                                                        positive)
 
-            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos)
+            aggregate_inputs(sequence, rep_token, first_token_pos, rep_dist, rep_pos, seq_len)
 
-    return x, y, token_repeated, pos_first_token, repeat_dist, repeat_position
+    return x, y, token_repeated, pos_first_token, repeat_dist, repeat_position, sequence_len
 
 
 def decode_seq(x, y):

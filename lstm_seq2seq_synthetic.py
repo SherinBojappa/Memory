@@ -21,7 +21,6 @@ data_path = "fra.txt"
 input_seq = 'synthetic'
 seq_len = 4
 num_repeat = 1
-repeat_dist = 1
 num_tokens_rep = 1
 max_seq_len = 26
 eos_encoder = np.zeros(max_seq_len+1)
@@ -30,7 +29,7 @@ eos_decoder = 2
 sos_decoder = 3
 verbose = 0
 
-x, y, token_repeated, pos_first_token, repeat_dist, repeat_position = generate_dataset(max_seq_len,
+x, y, token_repeated, pos_first_token, repeat_dist, repeat_position, sequence_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
 
 # plots on the properties of the generated sequences
@@ -83,11 +82,14 @@ num_train = 0.8*encoder_input_data.shape[0]
 encoder_input_data_train = encoder_input_data[0:int(num_train)][:][:]
 decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
 decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
+sequence_len_train = sequence_len[0:int(num_train)]
 
 num_test = 0.2*encoder_input_data.shape[0]
 encoder_input_data_test = encoder_input_data[int(num_test):][:][:]
 decoder_input_data_test = decoder_input_data[int(num_test):][:][:]
 decoder_target_data_test = decoder_target_data[int(num_test):][:][:]
+sequence_len_test = sequence_len[int(num_train):]
+
 
 # Define an input sequence and process it.
 encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
@@ -152,7 +154,7 @@ decoder_model = keras.Model(
 )
 
 reverse_target_char_index = [0,1,2,3]
-def decode_sequence(input_seq):
+def decode_sequence(input_seq, len_input_sequence):
     # Encode the input as state vectors.
     states_value = encoder_model.predict(input_seq)
 
@@ -177,8 +179,8 @@ def decode_sequence(input_seq):
 
         # Exit condition: either hit max length
         # or find stop character.
-        if sampled_char == eos_decoder or len(
-                decoded_sentence) > seq_len:
+        if int(sampled_char) == eos_decoder or len(
+                decoded_sentence) > len_input_sequence:
             stop_condition = True
 
         # Update the target sequence (of length 1).
@@ -189,7 +191,7 @@ def decode_sequence(input_seq):
         states_value = [h, c]
     return decoded_sentence
 
-y_pred = np.zeros((len(encoder_input_data_test), seq_len+2, 3), dtype="float32")
+y_pred = np.zeros((len(encoder_input_data_test), max_decoder_seq_length+1, 3), dtype="float32")
 
 one_hot_encoding_label = np.array(
     [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
@@ -197,8 +199,9 @@ for seq_index in range(len(encoder_input_data_test)):
     # Take one sequence (part of the training set)
     # for trying out decoding.
     input_seq = encoder_input_data_test[seq_index: seq_index + 1]
-    decoded_sentence = decode_sequence(input_seq)
-    val_one_hot = np.zeros((1,seq_len+2,3),dtype="float32")
+    len_input_sequence = np.array(sequence_len_test[seq_index: seq_index + 1])
+    decoded_sentence = decode_sequence(input_seq, len_input_sequence)
+    val_one_hot = np.zeros((1,max_decoder_seq_length+1,3),dtype="float32")
     for num, val in enumerate(decoded_sentence):
         val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
     y_pred[seq_index:seq_index+1] = val_one_hot
