@@ -33,7 +33,7 @@ x, y, token_repeated, pos_first_token, repeat_dist, repeat_position, sequence_le
                                                                       num_tokens_rep)
 
 # plots on the properties of the generated sequences
-plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position)
+#plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position)
 
 num_samples = len(x)
 print("The total number of samples in the dataset is " + str(num_samples))
@@ -85,9 +85,9 @@ decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
 sequence_len_train = sequence_len[0:int(num_train)]
 
 num_test = 0.2*encoder_input_data.shape[0]
-encoder_input_data_test = encoder_input_data[int(num_test):][:][:]
-decoder_input_data_test = decoder_input_data[int(num_test):][:][:]
-decoder_target_data_test = decoder_target_data[int(num_test):][:][:]
+encoder_input_data_test = encoder_input_data[int(num_train):][:][:]
+decoder_input_data_test = decoder_input_data[int(num_train):][:][:]
+decoder_target_data_test = decoder_target_data[int(num_train):][:][:]
 sequence_len_test = sequence_len[int(num_train):]
 
 
