@@ -3,6 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping
 #from dataset.memory_dataset_generation import *
 from dataset.synthetic_dataset import *
 from sklearn.model_selection import train_test_split
@@ -119,13 +120,21 @@ model = keras.Model([encoder_inputs, decoder_inputs], decoder_outputs)
 model.compile(
     optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
 )
-model.fit(
+
+# early stopping
+es_cb = EarlyStopping(monitor="val_loss", patience=0, verbose=1,
+                      mode="min")
+
+history = model.fit(
     [encoder_input_data_train, decoder_input_data_train],
     decoder_target_data_train,
     batch_size=batch_size,
     epochs=epochs,
     validation_split=0.3,
+    callbacks=[es_cb]
 )
+
+print("Number of epochs run: " + str(len(history.history["loss"])))
 # Save model
 #model.save("s2s")
 
