@@ -79,17 +79,28 @@ for i in range(num_samples):
         decoder_target_data[i, seq] = decoder_input_data[i, seq+1]
 
 # train test split
-num_train = 0.8*encoder_input_data.shape[0]
-encoder_input_data_train = encoder_input_data[0:int(num_train)][:][:]
-decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
-decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
-sequence_len_train = sequence_len[0:int(num_train)]
+(encoder_input_data_train, encoder_input_data_test,
+decoder_input_data_train, decoder_input_data_test,
+decoder_target_data_train, decoder_target_data_test,
+sequence_len_train, sequence_len_test,
+token_repeated_train, token_repeated_test,
+pos_first_token_train, pos_first_token_test,
+repeat_dist_train, repeat_dist_test,
+repeat_position_train, repeat_position_test) = train_test_split(encoder_input_data, decoder_input_data,
+                                decoder_target_data, sequence_len, token_repeated, pos_first_token,
+                                 repeat_dist, repeat_position, test_size=0.3)
 
-num_test = 0.2*encoder_input_data.shape[0]
-encoder_input_data_test = encoder_input_data[int(num_train):][:][:]
-decoder_input_data_test = decoder_input_data[int(num_train):][:][:]
-decoder_target_data_test = decoder_target_data[int(num_train):][:][:]
-sequence_len_test = sequence_len[int(num_train):]
+# num_train = 0.8*encoder_input_data.shape[0]
+# encoder_input_data_train = encoder_input_data[0:int(num_train)][:][:]
+# decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
+# decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
+# sequence_len_train = sequence_len[0:int(num_train)]
+#
+# num_test = 0.2*encoder_input_data.shape[0]
+# encoder_input_data_test = encoder_input_data[int(num_train):][:][:]
+# decoder_input_data_test = decoder_input_data[int(num_train):][:][:]
+# decoder_target_data_test = decoder_target_data[int(num_train):][:][:]
+# sequence_len_test = sequence_len[int(num_train):]
 
 
 # Define an input sequence and process it.
