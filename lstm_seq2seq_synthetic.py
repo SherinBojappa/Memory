@@ -249,6 +249,7 @@ for seq_index in range(len(encoder_input_data_test)):
     print("Input sentence:", seq)
     """
 print("Balanced accuracy of test set")
+print(np.average(balanced_accuracy,axis=0))
 #y_true = decoder_target_data_test.argmax(axis=2).ravel()
 #y_est = y_pred.argmax(axis=2).ravel()
 #print(balanced_accuracy_score(y_true, y_est))
