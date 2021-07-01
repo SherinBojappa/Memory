@@ -168,7 +168,8 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     for seq_len in range(min_seq_len, max_seq_len+1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
-        num_samples = min((26*np.math.factorial(seq_len-1)), 500)
+        #num_samples = min((26*np.math.factorial(seq_len-1)), 500)
+        num_samples=5
         sequence_length[seq_len] = num_samples*2
         for sample in range(num_samples):
             positive = 1

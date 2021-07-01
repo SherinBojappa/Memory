@@ -7,7 +7,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 #from dataset.memory_dataset_generation import *
 from dataset.synthetic_dataset import *
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, recall_score
 from sklearn.metrics import classification_report
 
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
@@ -173,7 +173,7 @@ decoder_model = keras.Model(
     [decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states
 )
 
-reverse_target_char_index = [0,1,2,3]
+#reverse_target_char_index = [0,1,2,3]
 def decode_sequence(input_seq, len_input_sequence):
     # Encode the input as state vectors.
     states_value = encoder_model.predict(input_seq)
@@ -181,25 +181,25 @@ def decode_sequence(input_seq, len_input_sequence):
     # Generate empty target sequence of length 1.
     target_seq = np.zeros((1, 1, 3))
     # Populate the first character of target sequence with the start character.
-    target_seq[0,0:] = one_hot_encoding_label[sos_decoder]
+    target_seq[0, 0, :] = one_hot_encoding_label[sos_decoder]
     #target_seq[0, 0, target_token_index["\t"]] = 1.0
 
     # Sampling loop for a batch of sequences
     # (to simplify, here we assume a batch of size 1).
     stop_condition = False
-    decoded_sentence = ""
+    decoded_sentence = []
     while not stop_condition:
         output_tokens, h, c = decoder_model.predict(
             [target_seq] + states_value)
 
         # Sample a token
         sampled_token_index = np.argmax(output_tokens[0, -1, :])
-        sampled_char = str(reverse_target_char_index[sampled_token_index])
-        decoded_sentence += sampled_char
+        #sampled_char = str(reverse_target_char_index[sampled_token_index])
+        decoded_sentence.append(sampled_token_index) #sampled_char
 
         # Exit condition: either hit max length
         # or find stop character.
-        if int(sampled_char) == eos_decoder or len(
+        if sampled_token_index == eos_decoder or len(
                 decoded_sentence) > len_input_sequence:
             stop_condition = True
 
@@ -209,9 +209,10 @@ def decode_sequence(input_seq, len_input_sequence):
 
         # Update states
         states_value = [h, c]
-    return decoded_sentence
+    return np.array(decoded_sentence)
 
-y_pred = np.zeros((len(encoder_input_data_test), max_decoder_seq_length+1, 3), dtype="float32")
+#y_pred = np.zeros((len(encoder_input_data_test), max_decoder_seq_length+1, 3), dtype="float32")
+balanced_accuracy = np.zeros((len(encoder_input_data_test),3))
 
 one_hot_encoding_label = np.array(
     [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
@@ -221,10 +222,24 @@ for seq_index in range(len(encoder_input_data_test)):
     input_seq = encoder_input_data_test[seq_index: seq_index + 1]
     len_input_sequence = np.array(sequence_len_test[seq_index: seq_index + 1])
     decoded_sentence = decode_sequence(input_seq, len_input_sequence)
-    val_one_hot = np.zeros((1,max_decoder_seq_length+1,3),dtype="float32")
-    for num, val in enumerate(decoded_sentence):
-        val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
-    y_pred[seq_index:seq_index+1] = val_one_hot
+    #val_one_hot = np.zeros((1,max_decoder_seq_length+1,3),dtype="float32")
+    #for num, val in enumerate(decoded_sentence):
+    #    val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
+    y_true = decoder_target_data_test[seq_index][:len_input_sequence[0]+1].argmax(axis=1).ravel()
+    y_est = np.zeros_like(y_true) + 2
+    y_est[:len(decoded_sentence)] = decoded_sentence #val_one_hot.argmax(axis=2).ravel()
+    metric = recall_score(y_true, y_est, average=None)
+    if(len(metric) == 3):
+        balanced_accuracy[seq_index] = metric
+    else:
+        balanced_accuracy[seq_index][0] = metric[0]
+        balanced_accuracy[seq_index][1] = 0
+        balanced_accuracy[seq_index][2] = metric[1]
+
+    #balanced_accuracy[seq_index] = recall_score(y_true, y_est, average=None)
+    print(balanced_accuracy[seq_index])
+
+    #y_pred[seq_index:seq_index+1] = val_one_hot
     """
     print("-")
     print("Decoded sentence:", decoded_sentence)
@@ -234,10 +249,10 @@ for seq_index in range(len(encoder_input_data_test)):
     print("Input sentence:", seq)
     """
 print("Balanced accuracy of test set")
-y_true = decoder_target_data_test.argmax(axis=2).ravel()
-y_est = y_pred.argmax(axis=2).ravel()
-print(balanced_accuracy_score(y_true, y_est))
-print(classification_report(y_true, y_est))
+#y_true = decoder_target_data_test.argmax(axis=2).ravel()
+#y_est = y_pred.argmax(axis=2).ravel()
+#print(balanced_accuracy_score(y_true, y_est))
+#print(classification_report(y_true, y_est))
 
 
 
