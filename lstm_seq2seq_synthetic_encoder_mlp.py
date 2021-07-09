@@ -132,68 +132,22 @@ history = model.fit(
 
 print("Number of epochs run: " + str(len(history.history["loss"])))
 
-#reverse_target_char_index = [0,1,2,3]
-def decode_sequence(input_seq, len_input_sequence):
-    # Encode the input as state vectors.
-    states_value = encoder_mlp_model.predict(input_seq)
-
-    # Generate empty target sequence of length 1.
-    target_seq = np.zeros((1, 1, 3))
-    # Populate the first character of target sequence with the start character.
-    target_seq[0, 0, :] = one_hot_encoding_label[sos_decoder]
-    #target_seq[0, 0, target_token_index["\t"]] = 1.0
-
-    # Sampling loop for a batch of sequences
-    # (to simplify, here we assume a batch of size 1).
-    stop_condition = False
-    decoded_sentence = []
-    while not stop_condition:
-        output_tokens, h, c = decoder_model.predict(
-            [target_seq] + states_value)
-
-        # Sample a token
-        sampled_token_index = np.argmax(output_tokens[0, -1, :])
-        #sampled_char = str(reverse_target_char_index[sampled_token_index])
-        decoded_sentence.append(sampled_token_index) #sampled_char
-
-        # Exit condition: either hit max length
-        # or find stop character.
-        if sampled_token_index == eos_decoder or len(
-                decoded_sentence) > len_input_sequence:
-            stop_condition = True
-
-        # Update the target sequence (of length 1).
-        target_seq = np.zeros((1, 1, 3))
-        target_seq[0, 0, :] = one_hot_encoding_label[sampled_token_index]
-
-        # Update states
-        states_value = [h, c]
-    return np.array(decoded_sentence)
-
 #y_pred = np.zeros((len(encoder_input_data_test), max_decoder_seq_length+1, 3), dtype="float32")
-balanced_accuracy = np.zeros((len(encoder_input_data_test),3))
+balanced_accuracy = np.zeros((len(encoder_input_data_test),2))
 
 one_hot_encoding_label = np.array(
-    [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
+    [[1, 0, 0], [0, 1, 0]])
 for seq_index in range(len(encoder_input_data_test)):
     # Take one sequence (part of the training set)
     # for trying out decoding.
     input_seq = encoder_input_data_test[seq_index: seq_index + 1]
     len_input_sequence = np.array(sequence_len_test[seq_index: seq_index + 1])
-    decoded_sentence = decode_sequence(input_seq, len_input_sequence)
-    #val_one_hot = np.zeros((1,max_decoder_seq_length+1,3),dtype="float32")
-    #for num, val in enumerate(decoded_sentence):
-    #    val_one_hot[0][num][:] = one_hot_encoding_label[int(val)]
-    y_true = decoder_target_data_test[seq_index][:len_input_sequence[0]+1].argmax(axis=1).ravel()
-    y_est = np.zeros_like(y_true) + 2
-    y_est[:len(decoded_sentence)] = decoded_sentence #val_one_hot.argmax(axis=2).ravel()
-    metric = recall_score(y_true, y_est, average=None)
-    if(len(metric) == 3):
-        balanced_accuracy[seq_index] = metric
-    else:
-        balanced_accuracy[seq_index][0] = metric[0]
-        balanced_accuracy[seq_index][1] = 0
-        balanced_accuracy[seq_index][2] = metric[1]
+    y_pred = np.array(model.predict(input_seq), dtype="float32")
+    y_true = np.array(y_mlp_test[seq_index: seq_index+1])
+
+    metric = recall_score(y_true, y_pred, average=None)
+    balanced_accuracy[seq_index][0] = metric[0]
+    balanced_accuracy[seq_index][1] = metric[1]
 
     #balanced_accuracy[seq_index] = recall_score(y_true, y_est, average=None)
     print(balanced_accuracy[seq_index])
