@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 x = list()
 # label
 y = list()
+y_mlp = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
@@ -113,7 +114,9 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
     sequence_one_hot.append(eos_seq_ip)
     x.append(sequence_one_hot)
 
-    y.append(positive)
+    label = generate_labels(sequence)
+    y.append(label)
+    y_mlp.append(positive)
 
     token_repeated.append(rep_token)
     pos_first_token.append(first_token_pos)
@@ -158,7 +161,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
 
             aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
 
-    return x, y, token_repeated, pos_first_token, sequence_len
+    return x, y, y_mlp, token_repeated, pos_first_token, sequence_len
 
 
 def decode_seq(x, y):
@@ -213,12 +216,14 @@ def plot_data(x, y, token_repeated, pos_first_token):
         plt.savefig("First token position : seq_len" + str(i))
         plt.close()
 
-
+"""
 num_tokens_rep = 1
 max_seq_len = 26
 
-x, y, token_repeated, pos_first_token, seq_len = generate_dataset(max_seq_len,
+x, y, y_mlp, token_repeated, pos_first_token, seq_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
+
+
 decode_seq(x,y)
 
 # scatter plot of the seq len and position first token
@@ -227,3 +232,5 @@ decode_seq(x,y)
 #plt.show()
 
 plot_data(x, y, token_repeated, pos_first_token)
+
+"""
