@@ -132,42 +132,12 @@ history = model.fit(
 
 print("Number of epochs run: " + str(len(history.history["loss"])))
 
-#y_pred = np.zeros((len(encoder_input_data_test), max_decoder_seq_length+1, 3), dtype="float32")
-balanced_accuracy = np.zeros((len(encoder_input_data_test),2))
 
-one_hot_encoding_label = np.array(
-    [[1, 0, 0], [0, 1, 0]])
-for seq_index in range(len(encoder_input_data_test)):
-    # Take one sequence (part of the training set)
-    # for trying out decoding.
-    input_seq = encoder_input_data_test[seq_index: seq_index + 1]
-    len_input_sequence = np.array(sequence_len_test[seq_index: seq_index + 1])
-    y_pred = np.array(model.predict(input_seq), dtype="float32")
-    y_true = np.array(y_mlp_test[seq_index: seq_index+1])
-
-    metric = recall_score(y_true, y_pred, average=None)
-    balanced_accuracy[seq_index][0] = metric[0]
-    balanced_accuracy[seq_index][1] = metric[1]
-
-    #balanced_accuracy[seq_index] = recall_score(y_true, y_est, average=None)
-    print(balanced_accuracy[seq_index])
-
-    #y_pred[seq_index:seq_index+1] = val_one_hot
-    """
-    print("-")
-    print("Decoded sentence:", decoded_sentence)
-    seq = []
-    for num in range(seq_len):
-        seq.append(one_hot_decoding(alphabet, input_seq[0][num][:]))
-    print("Input sentence:", seq)
-    """
-print("Balanced accuracy of test set")
-print(np.average(balanced_accuracy,axis=0))
-#y_true = decoder_target_data_test.argmax(axis=2).ravel()
-#y_est = y_pred.argmax(axis=2).ravel()
-#print(balanced_accuracy_score(y_true, y_est))
-#print(classification_report(y_true, y_est))
-
+y_true = np.array(y_mlp_test, dtype="float32")
+# test results
+y_test = model.predict(encoder_input_data_test)
+y_pred = np.argmax(y_test, axis=1)
+balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
 
 
 
