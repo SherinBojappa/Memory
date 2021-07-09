@@ -11,6 +11,7 @@ from sklearn.metrics import balanced_accuracy_score, recall_score
 from sklearn.metrics import classification_report
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.utils import to_categorical
 
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
@@ -118,9 +119,11 @@ model.compile(
 es_cb = EarlyStopping(monitor="val_loss", patience=0, verbose=1,
                       mode="min")
 
+y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
+
 history = model.fit(
     encoder_input_data_train,
-    y_mlp_train,
+    y_mlp_binary_train,
     batch_size=batch_size,
     epochs=epochs,
     validation_split=0.3,
