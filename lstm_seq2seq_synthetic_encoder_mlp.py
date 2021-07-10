@@ -137,7 +137,35 @@ y_true = np.array(y_mlp_test, dtype="float32")
 # test results
 y_test = model.predict(encoder_input_data_test)
 y_pred = np.argmax(y_test, axis=1)
+
+# total balanced accuracy accross the entire test dataset
 balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
+print(balanced_accuracy)
+
+# Find the balanced accuracy accross different sequence length
+sequence_len_arr = np.array(sequence_len_test)
+# balanced_acc_seq_len of 0 and 1 are meaningless
+balanced_acc_seq_len = [0]*26
+
+for seq_len in range(2,26):
+    seq_len_indices = []
+    # get the indices of samples which have a particular sequence length
+    seq_len_indices = np.where(sequence_len_arr == seq_len)
+    # splice y_true and y_pred based on the seq length
+    y_true_seq_len = np.take(y_true, seq_len_indices)
+    y_pred_seq_len = np.take(y_pred, seq_len_indices)
+    balanced_acc_seq_len[seq_len] = balanced_accuracy_score(y_true_seq_len[0],
+                                                            y_pred_seq_len[0])
+    print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
+
+# plot the balanced accuracy per sequence length
+x = np.arange(0,26)
+plt.title("Balanced accuracy versus sequence length")
+plt.xlabel("sequence length")
+plt.ylabel("balanced accuracy")
+plt.plot(x, balanced_acc_seq_len)
+plt.show()
+
 
 
 
