@@ -19,9 +19,9 @@ y_mlp = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
-sequence_length = [0] * 27
 max_seq_len = 26
-
+# ignore entries 0,1 - seq length is one based with min=2 and max=max_seq_len
+samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
 eos_seq_ip[-1] = 1
 
@@ -29,7 +29,7 @@ eos_decoder = 2
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 num_to_letter = {}
-num_to_letter[26] = "eos"
+num_to_letter[max_seq_len] = "eos"
 for num, letter in enumerate(alphabet):
     num_to_letter[num] = letter
 
@@ -82,7 +82,7 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     """
     # repeat position - recency; random but be balanced accross dataset
 
-    seq_list = np.arange(0, 26)
+    seq_list = np.arange(0, max_seq_len)
     shuffle(seq_list)
     seq_list = seq_list[:seq_len]
 
@@ -133,7 +133,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     :return:
     """
 
-
+    # min seq_len is always 2 as we do not consider 1 length sequence
     min_seq_len = 2
     num_repeat = 1
 
@@ -141,7 +141,8 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
         num_samples = min((26*np.math.factorial(seq_len-1)), 5000)
-        sequence_length[seq_len] = num_samples*2
+        # number of samples per sequence
+        samples_seq[seq_len] = num_samples*2
         for sample in range(num_samples):
             positive = 1
             sequence, rep_token, first_token_pos, seq_len = generate_seq(seq_len,
@@ -190,8 +191,8 @@ def plot_data(x, y, token_repeated, pos_first_token):
     plt.title("Histogram of the tokens repeated")
     plt.xlabel("Letter repeated")
     plt.ylabel("Number of samples in which token is repeated")
-    ax.bar(range(26), counts, width=1, align='center',edgecolor = 'black')
-    ax.set(xticks=range(27), xlim=[-1, 26])
+    ax.bar(range(max_seq_len), counts, width=1, align='center',edgecolor = 'black')
+    ax.set(xticks=range(max_seq_len+1), xlim=[-1, max_seq_len])
     plt.savefig("Tokens histogram")
     plt.close()
     # Show plot
@@ -202,21 +203,21 @@ def plot_data(x, y, token_repeated, pos_first_token):
     start_index = 0
     end_index = 0
 
-    for i in range(2, 27):
+    for i in range(2, max_seq_len+1):
         # sequence length doesnt count the negative samples
-        start_index = start_index + sequence_length[i-1]
-        end_index = end_index + sequence_length[i]
+        start_index = start_index + samples_seq[i-1]
+        end_index = end_index + samples_seq[i]
         fig, ax = plt.subplots()
         plt.title("First position histogram: seq_len" + str(i))
         plt.xlabel("first position of repeated token")
         plt.ylabel("Number of samples")
         counts = np.bincount(np.array(pos_first_token[start_index:end_index:2]).astype('int64'))
         ax.bar(np.arange(i-1), counts, width=1, align='center', edgecolor='black')
-        ax.set(xticks=np.arange(i-1), xlim=[0, 26])
+        ax.set(xticks=np.arange(i-1), xlim=[0, max_seq_len])
         plt.savefig("First token position : seq_len" + str(i))
         plt.close()
 
-"""
+
 num_tokens_rep = 1
 max_seq_len = 26
 
@@ -224,7 +225,7 @@ x, y, y_mlp, token_repeated, pos_first_token, seq_len = generate_dataset(max_seq
                                                                       num_tokens_rep)
 
 
-decode_seq(x,y)
+decode_seq(x,y_mlp)
 
 # scatter plot of the seq len and position first token
 #plt.plot(pos_first_token[0:len(pos_first_token):2], 'o')
@@ -233,4 +234,3 @@ decode_seq(x,y)
 
 plot_data(x, y, token_repeated, pos_first_token)
 
-"""
