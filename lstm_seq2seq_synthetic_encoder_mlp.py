@@ -145,9 +145,9 @@ print(balanced_accuracy)
 # Find the balanced accuracy accross different sequence length
 sequence_len_arr = np.array(sequence_len_test)
 # balanced_acc_seq_len of 0 and 1 are meaningless
-balanced_acc_seq_len = [0]*26
+balanced_acc_seq_len = [0]*max_seq_len
 
-for seq_len in range(2,26):
+for seq_len in range(2,max_seq_len+1):
     seq_len_indices = []
     # get the indices of samples which have a particular sequence length
     seq_len_indices = np.where(sequence_len_arr == seq_len)
@@ -159,7 +159,7 @@ for seq_len in range(2,26):
     print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
 
 # plot the balanced accuracy per sequence length
-x = np.arange(0,26)
+x = np.arange(0,max_seq_len)
 plt.title("Balanced accuracy versus sequence length")
 plt.xlabel("sequence length")
 plt.ylabel("balanced accuracy")
