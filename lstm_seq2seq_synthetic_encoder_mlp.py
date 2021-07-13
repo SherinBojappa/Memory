@@ -159,7 +159,7 @@ for seq_len in range(2,max_seq_len+1):
     print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
 
 # plot the balanced accuracy per sequence length
-x = np.arange(0,max_seq_len)
+x = np.arange(0,max_seq_len+1)
 plt.title("Balanced accuracy versus sequence length")
 plt.xlabel("sequence length")
 plt.ylabel("balanced accuracy")
