@@ -145,7 +145,7 @@ print(balanced_accuracy)
 # Find the balanced accuracy accross different sequence length
 sequence_len_arr = np.array(sequence_len_test)
 # balanced_acc_seq_len of 0 and 1 are meaningless
-balanced_acc_seq_len = [0]*max_seq_len
+balanced_acc_seq_len = [0]*(max_seq_len+1)
 
 for seq_len in range(2,max_seq_len+1):
     seq_len_indices = []
