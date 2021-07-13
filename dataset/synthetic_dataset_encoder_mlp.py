@@ -217,7 +217,7 @@ def plot_data(x, y, token_repeated, pos_first_token):
         plt.savefig("First token position : seq_len" + str(i))
         plt.close()
 
-
+"""
 num_tokens_rep = 1
 max_seq_len = 26
 
@@ -226,11 +226,10 @@ x, y, y_mlp, token_repeated, pos_first_token, seq_len = generate_dataset(max_seq
 
 
 decode_seq(x,y_mlp)
-
+"""
 # scatter plot of the seq len and position first token
 #plt.plot(pos_first_token[0:len(pos_first_token):2], 'o')
 #plt.plot(seq_len[0:len(seq_len):2], 'o')
 #plt.show()
 
-plot_data(x, y, token_repeated, pos_first_token)
-
+#plot_data(x, y, token_repeated, pos_first_token)
