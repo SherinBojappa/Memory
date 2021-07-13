@@ -19,13 +19,14 @@ y_mlp = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
-max_seq_len = 26
+max_seq_len = 600
 # ignore entries 0,1 - seq length is one based with min=2 and max=max_seq_len
 samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
 eos_seq_ip[-1] = 1
 
 eos_decoder = 2
+num_instances_per_seq_len = 50
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 num_to_letter = {}
@@ -140,7 +141,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     for seq_len in range(min_seq_len, max_seq_len+1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
-        num_samples = min((26*np.math.factorial(seq_len-1)), 5000)
+        num_samples = min((26*np.math.factorial(seq_len-1)), num_instances_per_seq_len)
         # number of samples per sequence
         samples_seq[seq_len] = num_samples*2
         for sample in range(num_samples):
