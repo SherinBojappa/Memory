@@ -31,7 +31,7 @@ eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
-verbose = 0
+verbose = 1
 
 x, y, y_mlp, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
@@ -72,9 +72,6 @@ encoder_input_data = np.zeros((num_samples, max_encoder_seq_length,
 
 mlp_input_data = np.zeros((num_samples, num_encoder_tokens), dtype = "float32")
 
-if(verbose == 1):
-    decode_seq(x_encoder, y)
-
 one_hot_encoding_label = np.array([[1,0,0], [0,1,0], [0,0,1], [1,1,1]])
 
 for i in range(num_samples):
@@ -92,18 +89,13 @@ token_repeated_train, token_repeated_test,
 pos_first_token_train, pos_first_token_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
                                  sequence_len, token_repeated, pos_first_token, test_size=0.3)
 
-# num_train = 0.8*encoder_input_data.shape[0]
-# encoder_input_data_train = encoder_input_data[0:int(num_train)][:][:]
-# decoder_input_data_train = decoder_input_data[0:int(num_train)][:][:]
-# decoder_target_data_train = decoder_target_data[0:int(num_train)][:][:]
-# sequence_len_train = sequence_len[0:int(num_train)]
-#
-# num_test = 0.2*encoder_input_data.shape[0]
-# encoder_input_data_test = encoder_input_data[int(num_train):][:][:]
-# decoder_input_data_test = decoder_input_data[int(num_train):][:][:]
-# decoder_target_data_test = decoder_target_data[int(num_train):][:][:]
-# sequence_len_test = sequence_len[int(num_train):]
-
+if(verbose == 1):
+    check_dataset(encoder_input_data_train, encoder_input_data_test,
+                  mlp_input_data_train, mlp_input_data_test,
+                  y_mlp_train, y_mlp_test,
+                  sequence_len_train, sequence_len_test,
+                  token_repeated_train, token_repeated_test,
+                  pos_first_token_train, pos_first_token_test)
 
 # Define an input sequence and process it.
 encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))

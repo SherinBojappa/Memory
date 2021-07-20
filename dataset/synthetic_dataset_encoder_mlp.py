@@ -38,11 +38,17 @@ def one_hot_decoding(alphabet, one_hot_ip):
 
     seq = list()
     pos = 0
+    letter_assigned = 0
     for val in one_hot_ip:
         if val == 1:
             letter = num_to_letter[pos]
+            letter_assigned = 1
             break
         pos = pos+1
+
+    # numpy arrays are sized to the max input so you can get all 0s as well
+    if(letter_assigned == 0):
+        letter = 'past end of sequence'
 
     seq.append(letter)
     return seq
@@ -71,7 +77,6 @@ def generate_labels(sequence):
 
     label[seq_len] = eos_decoder
     return label
-
 
 def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     """
@@ -182,6 +187,47 @@ def decode_seq(x, y):
         print(" Sequence: " + str(seq_list[sample][0]) + "Target: " + str(
             seq_list[sample][1]))
 
+def decode_seq_encoder_mlp(x_encoder, x_mlp, y):
+    batch_encoder = []
+    batch_mlp = []
+    num_samples = len(x_encoder)
+    for sequence_index in range(num_samples):
+        num_tokens = len(x_encoder[sequence_index])
+        seq = []
+        for token in range(num_tokens):
+            seq.append(one_hot_decoding(alphabet, x_encoder[sequence_index][token]))
+
+        # decoder the query one hot encoded vector
+        batch_mlp.append(one_hot_decoding(alphabet, x_mlp[sequence_index]))
+        batch_encoder.append(seq)
+
+    seq_list = [(batch_encoder[seq_index], batch_mlp[seq_index], y[seq_index])
+                for seq_index in range(num_samples)]
+
+# check some random samples
+    for sample in range(10):
+        seq_id = randint(0, num_samples)
+        if batch_mlp[seq_id] in batch_encoder[seq_id]:
+            if(y[seq_id] == 1):
+                print("Test passed")
+                print(" Sequence: " + str(seq_list[sample][0]) + " MLP input: " + str(batch_mlp[sample]) +
+                        "Target: " + str(seq_list[sample][2]))
+            else:
+                print("Test Failed")
+                print(" Sequence: " + str(seq_list[sample][0]) + " MLP input: " + str(batch_mlp[sample]) +
+                        "Target: " + str(seq_list[sample][2]))
+            print(sample)
+
+def check_dataset(encoder_input_data_train, encoder_input_data_test,
+                  mlp_input_data_train, mlp_input_data_test,
+                  y_mlp_train, y_mlp_test,
+                  sequence_len_train, sequence_len_test,
+                  token_repeated_train, token_repeated_test,
+                  pos_first_token_train, pos_first_token_test):
+
+    # check the train data
+    decode_seq_encoder_mlp(encoder_input_data_train, mlp_input_data_train, y_mlp_train)
+
 
 def plot_data(x, y, token_repeated, pos_first_token):
     plt.figure()
@@ -226,8 +272,9 @@ x, y, y_mlp, token_repeated, pos_first_token, seq_len = generate_dataset(max_seq
                                                                       num_tokens_rep)
 
 
-decode_seq(x,y_mlp)
+#decode_seq(x,y_mlp)
 """
+
 # scatter plot of the seq len and position first token
 #plt.plot(pos_first_token[0:len(pos_first_token):2], 'o')
 #plt.plot(seq_len[0:len(seq_len):2], 'o')
