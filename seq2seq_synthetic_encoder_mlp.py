@@ -81,6 +81,7 @@ for i in range(num_samples):
     seq_len = len(x_encoder[i])
     for seq in range(seq_len):
         encoder_input_data[i, seq] = x_encoder[i][seq]
+    mlp_input_data[i] = x_mlp[i]
 
 # train test split
 (encoder_input_data_train, encoder_input_data_test,
