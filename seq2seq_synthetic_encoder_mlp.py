@@ -33,6 +33,9 @@ eos_decoder = 2
 sos_decoder = 3
 verbose = 1
 
+# memory model can be lstm, rnn, or cnn
+memory_model = "lstm"
+
 x, y, y_mlp, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
 
@@ -101,14 +104,25 @@ if(verbose == 1):
 encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
 mlp_input = keras.Input(shape=(num_encoder_tokens))
 
-encoder = keras.layers.LSTM(latent_dim, return_state=True)
-encoder_outputs, state_h, state_c = encoder(encoder_inputs)
+if(memory_model == "lstm"):
+    encoder = keras.layers.LSTM(latent_dim, return_state=True)
+    encoder_outputs, state_h, state_c = encoder(encoder_inputs)
+    # We discard `encoder_outputs` and only keep the states.
+    encoder_states = tf.concat((state_h, state_c), 1)
+    print("Encoder chosen is LSTM")
+elif(memory_model == "RNN"):
+    encoder = keras.layers.SimpleRNN(latent_dim, return_state=True)
+    encoder_output, state = encoder(encoder_inputs)
+    encoder_states = encoder_output
+    print("Encoder chosen is simple RNN")
+
+
 mlp_encoder = Sequential()
 mlp_ip_shape = mlp_input_data_train.shape[1]
 mlp_encoder.add(Dense(latent_dim, input_shape=(mlp_ip_shape,)))
 mlp_encoded_op = mlp_encoder(mlp_input)
-# We discard `encoder_outputs` and only keep the states.
-encoder_states = tf.concat((state_h, state_c),1)
+
+
 num_classes=2
 input_shape = encoder_states.shape[1]
 
