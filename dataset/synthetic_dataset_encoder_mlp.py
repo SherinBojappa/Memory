@@ -228,6 +228,47 @@ def check_dataset(encoder_input_data_train, encoder_input_data_test,
     # check the train data
     decode_seq_encoder_mlp(encoder_input_data_train, mlp_input_data_train, y_mlp_train)
 
+# check if the train and the test dataset have any same sequences.
+def check_train_test(encoder_input_data_train, encoder_input_data_test):
+    num_rept_test = 0
+    train_samples = {}
+    test_samples = {}
+    train_encoder = []
+    test_encoder = []
+    num_samples = len(encoder_input_data_train)
+    for sequence_index in range(num_samples):
+        num_tokens = len(encoder_input_data_train[sequence_index])
+        seq = []
+        for token in range(num_tokens):
+            seq.append(one_hot_decoding(alphabet, encoder_input_data_train[sequence_index][token]))
+        train_encoder.append(seq)
+
+    num_samples = len(encoder_input_data_test)
+    for sequence_index in range(num_samples):
+        num_tokens = len(encoder_input_data_test[sequence_index])
+        seq = []
+        for token in range(num_tokens):
+            seq.append(one_hot_decoding(alphabet, encoder_input_data_test[sequence_index][token]))
+        test_encoder.append(seq)
+
+    # remove eos and anything after eos
+    train_encoder = np.array(train_encoder)
+    test_encoder = np.array(test_encoder)
+
+    for index, seq in enumerate(train_encoder):
+        seq_idx = np.where(seq == 'eos')
+        train_samples[''.join([i[0] for i in seq[0:seq_idx[0][0]].tolist()])] = index
+
+    for index, seq in enumerate(test_encoder):
+        seq_idx = np.where(seq == 'eos')
+        test_samples[''.join([i[0] for i in seq[0:seq_idx[0][0]].tolist()])] = index
+
+    for seq in train_samples.keys():
+        if seq in test_samples:
+            num_rept_test = num_rept_test+1
+
+    return num_rept_test
+
 
 def plot_data(x, y, token_repeated, pos_first_token):
     plt.figure()

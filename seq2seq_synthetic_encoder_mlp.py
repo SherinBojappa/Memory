@@ -96,6 +96,9 @@ token_repeated_train, token_repeated_test,
 pos_first_token_train, pos_first_token_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
                                  sequence_len, token_repeated, pos_first_token, test_size=0.3)
 
+# check if the train and test have different inputs
+num_rept_test = check_train_test(encoder_input_data_train, encoder_input_data_test)
+
 if(verbose == 1):
     check_dataset(encoder_input_data_train, encoder_input_data_test,
                   mlp_input_data_train, mlp_input_data_test,
