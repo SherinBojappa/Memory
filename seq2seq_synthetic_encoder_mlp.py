@@ -11,7 +11,10 @@ from sklearn.metrics import balanced_accuracy_score, recall_score
 from sklearn.metrics import classification_report
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Conv1D
 from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import MaxPooling1D
 
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
@@ -31,10 +34,11 @@ eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
-verbose = 1
+verbose = 0
 
 # memory model can be lstm, rnn, or cnn
-memory_model = "lstm"
+#memory_model = "lstm"
+memory_model = "CNN"
 
 x, y, y_mlp, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
@@ -105,17 +109,41 @@ encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
 mlp_input = keras.Input(shape=(num_encoder_tokens))
 
 if(memory_model == "lstm"):
+    # Define an input sequence and process it.
+    encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
+    mlp_input = keras.Input(shape=(num_encoder_tokens))
+
     encoder = keras.layers.LSTM(latent_dim, return_state=True)
     encoder_outputs, state_h, state_c = encoder(encoder_inputs)
     # We discard `encoder_outputs` and only keep the states.
     encoder_states = tf.concat((state_h, state_c), 1)
     print("Encoder chosen is LSTM")
 elif(memory_model == "RNN"):
+    # Define an input sequence and process it.
+    encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
+    mlp_input = keras.Input(shape=(num_encoder_tokens))
+
     encoder = keras.layers.SimpleRNN(latent_dim, return_state=True)
     encoder_output, state = encoder(encoder_inputs)
     encoder_states = encoder_output
     print("Encoder chosen is simple RNN")
+    print("Shape of the encoder output is: " + str(encoder_states))
+elif(memory_model == "CNN"):
+    encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
+    mlp_input = keras.Input(shape=(num_encoder_tokens))
+    encoder = Sequential()
+    encoder.add(keras.layers.Reshape((1, num_encoder_tokens*(num_encoder_tokens-1))))
+    encoder.add(keras.layers.Conv1D(filters = latent_dim, kernel_size = 1, activation='relu'))
+    #encoder.add(MaxPooling1D(pool_size=2))
 
+    # flatten makes the shape as [None, None]
+    #encoder.add(Flatten())
+    encoder.add(keras.layers.Reshape((latent_dim,)))
+    # before feeding the input reshape it to be 27
+    encoder_output = encoder(encoder_inputs)
+    encoder_states = encoder_output
+    print("Encoder chosen is CNN")
+    print("Shape of the encoder output is: " + str(encoder_states))
 
 mlp_encoder = Sequential()
 mlp_ip_shape = mlp_input_data_train.shape[1]
@@ -140,7 +168,7 @@ mlp_output = model_mlp(soft_max_input)
 # Define the model that will turn
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = keras.Model([encoder_inputs, mlp_input], mlp_output)
-
+model.summary()
 model.compile(
     optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
 )
