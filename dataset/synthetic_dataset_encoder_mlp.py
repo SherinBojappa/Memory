@@ -27,7 +27,7 @@ eos_seq_ip[-1] = 1
 seq_dict = {}
 
 eos_decoder = 2
-num_instances_per_seq_len = 50
+num_instances_per_seq_len = 5000
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 num_to_letter = {}
@@ -250,12 +250,11 @@ def check_dataset(encoder_input_data_train, encoder_input_data_test,
     decode_seq_encoder_mlp(encoder_input_data_train, mlp_input_data_train, y_mlp_train)
 
 # check if the train and the test dataset have any same sequences.
-def check_train_test(encoder_input_data_train, encoder_input_data_test):
+def check_train_test(encoder_input_data_train):
+
     num_rept_test = 0
-    train_samples = {}
-    test_samples = {}
+    train_samples = []
     train_encoder = []
-    test_encoder = []
     num_samples = len(encoder_input_data_train)
     for sequence_index in range(num_samples):
         num_tokens = len(encoder_input_data_train[sequence_index])
@@ -264,28 +263,12 @@ def check_train_test(encoder_input_data_train, encoder_input_data_test):
             seq.append(one_hot_decoding(alphabet, encoder_input_data_train[sequence_index][token]))
         train_encoder.append(seq)
 
-    num_samples = len(encoder_input_data_test)
-    for sequence_index in range(num_samples):
-        num_tokens = len(encoder_input_data_test[sequence_index])
-        seq = []
-        for token in range(num_tokens):
-            seq.append(one_hot_decoding(alphabet, encoder_input_data_test[sequence_index][token]))
-        test_encoder.append(seq)
+    for seq in train_encoder:
+        train_samples.append([''.join([i[0] for i in seq[0:-1]])])
 
-    # remove eos and anything after eos
-    train_encoder = np.array(train_encoder)
-    test_encoder = np.array(test_encoder)
-
-    for index, seq in enumerate(train_encoder):
-        seq_idx = np.where(seq == 'eos')
-        train_samples[''.join([i[0] for i in seq[0:seq_idx[0][0]].tolist()])] = index
-
-    for index, seq in enumerate(test_encoder):
-        seq_idx = np.where(seq == 'eos')
-        test_samples[''.join([i[0] for i in seq[0:seq_idx[0][0]].tolist()])] = index
-
-    for seq in train_samples.keys():
-        if seq in test_samples:
+    for seq in train_samples:
+        count = train_samples.count(seq)
+        if(count > 1):
             num_rept_test = num_rept_test+1
 
     return num_rept_test

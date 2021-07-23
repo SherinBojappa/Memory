@@ -34,7 +34,7 @@ eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
-verbose = 0
+verbose = 1
 
 # memory model can be lstm, rnn, or cnn
 #memory_model = "lstm"
@@ -45,6 +45,12 @@ x, y, y_mlp, token_repeated, pos_first_token, sequence_len = generate_dataset(ma
 
 num_samples = len(x)
 print("The total number of samples in the dataset is " + str(num_samples))
+
+# check if the train and test have different inputs
+if(verbose == 1):
+    num_rept_test = check_train_test(x)
+    print("The number of overlaps in train and test are : " + str(num_rept_test))
+exit()
 # separate out the input to the encoder and the mlp
 # mlp is fed the last one hot encoded input
 x_mlp = [0]*num_samples
@@ -96,10 +102,7 @@ token_repeated_train, token_repeated_test,
 pos_first_token_train, pos_first_token_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
                                  sequence_len, token_repeated, pos_first_token, test_size=0.3)
 
-# check if the train and test have different inputs
-num_rept_test = check_train_test(encoder_input_data_train, encoder_input_data_test)
-print("The number of overlaps in train and test are : " + str(num_rept_test))
-exit()
+
 if(verbose == 1):
     check_dataset(encoder_input_data_train, encoder_input_data_test,
                   mlp_input_data_train, mlp_input_data_test,
