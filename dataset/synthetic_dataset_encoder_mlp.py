@@ -24,6 +24,7 @@ max_seq_len = 26
 samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
 eos_seq_ip[-1] = 1
+seq_dict = {}
 
 eos_decoder = 2
 num_instances_per_seq_len = 50
@@ -93,9 +94,7 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     seq_list = seq_list[:seq_len]
 
     if(positive):
-        # randomly generate first repeat position and the repeat position
-        #first_pos, rep_pos = randint(0, seq_len, 2)
-        #first_pos, rep_pos = random.sample(range(0, seq_len), 2)
+        # randomly generate first repeat position
 
         first_pos = randint(0, seq_len-1)
         # the repeated token is always at the end, there are no tokens after the
@@ -112,6 +111,15 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
     return seq_list, rep_token, first_pos, seq_len
 
 def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
+    seq_list = tuple(sequence)
+    if seq_list in seq_dict:
+        skipped = 1
+        return skipped
+    else:
+        skipped = 0
+        seq_dict[seq_list] = 1
+
+    # proceed to apend the sequence
     sequence_one_hot = []
     for token in sequence:
         seq_token = [0] * (max_seq_len + 1)
@@ -128,6 +136,9 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
     pos_first_token.append(first_token_pos)
     sequence_len.append(seq_len)
 
+    return skipped
+
+
 def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     """
     :param num_samples:
@@ -143,6 +154,9 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     min_seq_len = 2
     num_repeat = 1
 
+    num_positive_examples = 0
+    num_negative_examples = 0
+
     for seq_len in range(min_seq_len, max_seq_len+1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
@@ -155,18 +169,25 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
                                                                       num_repeat,
                                                                       num_tokens_rep,
                                                                        positive)
-
+            # while aggregating inputs do not add repeating samples
             if sequence is not None:
-                aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
+                skipped = aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
 
-            #negative samples, no repetition
-            positive = 0
-            sequence, rep_token, first_token_pos, seq_len = generate_seq(seq_len,
+            if(skipped == 0):
+                num_positive_examples =num_positive_examples + 1
+                #negative samples, only when we have added a positive sample
+                positive = 0
+                sequence, rep_token, first_token_pos, seq_len = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
                                                                        positive)
 
-            aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
+                skipped = aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
+                if(skipped == 0):
+                    num_negative_examples = num_negative_examples + 1
+
+    print("Number of positive examples are: " + str(num_positive_examples))
+    print("Number of negative examples are: " + str(num_negative_examples))
 
     return x, y, y_mlp, token_repeated, pos_first_token, sequence_len
 

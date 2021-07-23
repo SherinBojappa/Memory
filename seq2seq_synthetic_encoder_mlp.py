@@ -98,7 +98,8 @@ pos_first_token_train, pos_first_token_test) = train_test_split(encoder_input_da
 
 # check if the train and test have different inputs
 num_rept_test = check_train_test(encoder_input_data_train, encoder_input_data_test)
-
+print("The number of overlaps in train and test are : " + str(num_rept_test))
+exit()
 if(verbose == 1):
     check_dataset(encoder_input_data_train, encoder_input_data_test,
                   mlp_input_data_train, mlp_input_data_test,
