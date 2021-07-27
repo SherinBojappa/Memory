@@ -34,7 +34,7 @@ eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
-verbose = 1
+verbose = 0
 
 # memory model can be lstm, rnn, or cnn
 #memory_model = "lstm"
@@ -50,7 +50,7 @@ print("The total number of samples in the dataset is " + str(num_samples))
 if(verbose == 1):
     num_rept_test = check_train_test(x)
     print("The number of overlaps in train and test are : " + str(num_rept_test))
-exit()
+
 # separate out the input to the encoder and the mlp
 # mlp is fed the last one hot encoded input
 x_mlp = [0]*num_samples
