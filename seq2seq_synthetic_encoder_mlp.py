@@ -37,8 +37,9 @@ sos_decoder = 3
 verbose = 0
 
 # memory model can be lstm, rnn, or cnn
-#memory_model = "lstm"
-memory_model = "CNN"
+memory_model = "lstm"
+#memory_model = "CNN"
+#memory_model = "RNN"
 
 x, y, y_mlp, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
@@ -135,11 +136,13 @@ elif(memory_model == "RNN"):
     encoder_states = encoder_output
     print("Encoder chosen is simple RNN")
     print("Shape of the encoder output is: " + str(encoder_states))
+# FIXME BROKEN CNN RESHAPE
 elif(memory_model == "CNN"):
     encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
     mlp_input = keras.Input(shape=(num_encoder_tokens))
     encoder = Sequential()
-    encoder.add(keras.layers.Reshape((1, num_encoder_tokens*(num_encoder_tokens-1))))
+    #encoder.add(keras.layers.Reshape((1, num_encoder_tokens * (num_encoder_tokens - 1))))
+    encoder.add(keras.layers.Reshape((1, num_encoder_tokens*(num_encoder_tokens+1))))
     encoder.add(keras.layers.Conv1D(filters = latent_dim, kernel_size = 1, activation='relu'))
     #encoder.add(MaxPooling1D(pool_size=2))
 

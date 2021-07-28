@@ -9,6 +9,7 @@ from random import shuffle
 import numpy as np
 from numpy.random import randint
 import matplotlib.pyplot as plt
+from scipy.stats import ortho_group
 
 # input data
 # one hot encoded sequence with eos
@@ -25,11 +26,15 @@ samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
 eos_seq_ip[-1] = 1
 seq_dict = {}
+#encoding = "one_hot"
+encoding = "dense_orthonormal"
 
 eos_decoder = 2
 num_instances_per_seq_len = 5000
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
+# generate max_seq_len + eos number of orthonomal vectors
+orthonomal_vectors = ortho_group.rvs(dim=(max_seq_len+1))
 num_to_letter = {}
 num_to_letter[max_seq_len] = "eos"
 for num, letter in enumerate(alphabet):
@@ -122,10 +127,18 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
     # proceed to apend the sequence
     sequence_one_hot = []
     for token in sequence:
-        seq_token = [0] * (max_seq_len + 1)
-        seq_token[token] = 1
+
+        if(encoding == "one_hot"):
+            seq_token = [0] * (max_seq_len + 1)
+            seq_token[token] = 1
+        elif (encoding == "dense_orthonormal"):
+            seq_token = orthonomal_vectors[token]
+
         sequence_one_hot.append(seq_token)
-    sequence_one_hot.append(eos_seq_ip)
+    if(encoding == "one_hot"):
+        sequence_one_hot.append(eos_seq_ip)
+    elif(encoding == "dense_orthonomal"):
+        sequence_one_hot.append(orthonomal_vectors[-1])
     x.append(sequence_one_hot)
 
     label = generate_labels(sequence)
@@ -312,7 +325,7 @@ def plot_data(x, y, token_repeated, pos_first_token):
 """
 num_tokens_rep = 1
 max_seq_len = 26
-
+generate_orthonormal()
 x, y, y_mlp, token_repeated, pos_first_token, seq_len = generate_dataset(max_seq_len,
                                                                       num_tokens_rep)
 
