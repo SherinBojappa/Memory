@@ -17,6 +17,7 @@ x = list()
 # label
 y = list()
 y_mlp = list()
+raw_sequence = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
@@ -30,7 +31,6 @@ seq_dict = {}
 encoding = "dense_orthonormal"
 
 eos_decoder = 2
-num_instances_per_seq_len = 5000
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 # generate max_seq_len + eos number of orthonomal vectors
@@ -141,6 +141,7 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
         sequence_one_hot.append(orthonomal_vectors[-1])
     x.append(sequence_one_hot)
 
+    raw_sequence.append(sequence)
     label = generate_labels(sequence)
     y.append(label)
     y_mlp.append(positive)
@@ -152,7 +153,7 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
     return skipped
 
 
-def generate_dataset(max_seq_len=26, num_tokens_rep=1):
+def generate_dataset(max_seq_len=26, num_tokens_rep=1, num_instances_per_seq_len=5000):
     """
     :param num_samples:
     :param seq_len:
@@ -202,7 +203,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1):
     print("Number of positive examples are: " + str(num_positive_examples))
     print("Number of negative examples are: " + str(num_negative_examples))
 
-    return x, y, y_mlp, token_repeated, pos_first_token, sequence_len
+    return x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len
 
 
 def decode_seq(x, y):
