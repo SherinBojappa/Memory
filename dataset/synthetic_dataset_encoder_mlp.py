@@ -35,6 +35,7 @@ eos_decoder = 2
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 # generate max_seq_len + eos number of orthonomal vectors
 orthonomal_vectors = ortho_group.rvs(dim=(max_seq_len+1))
+np.save('orthonormal_vectors.npy', orthonomal_vectors)
 num_to_letter = {}
 num_to_letter[max_seq_len] = "eos"
 for num, letter in enumerate(alphabet):
