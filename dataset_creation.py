@@ -2,6 +2,7 @@
 
 from dataset.synthetic_dataset_encoder_mlp import *
 import csv
+import pickle
 
 # only one repeated token
 num_tokens_rep = 1
@@ -29,3 +30,7 @@ with open('memory_retention_raw.csv', 'w') as csvfile:
 
 csvfile.close()
 
+# save x as a pickle file
+f = open('input_data.pkl', 'wb')
+pickle.dump(x, f, -1)
+f.close()
