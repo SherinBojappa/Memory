@@ -16,7 +16,7 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import MaxPooling1D
 import pandas as pd
-
+import pickle
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
 batch_size = 64  # Batch size for training.
@@ -60,25 +60,35 @@ y_mlp = df['target_val']
 num_samples = len(raw_sequence)
 print("The total number of samples in the dataset is " + str(num_samples))
 
+# read the pickle file
+f = open('input_data.pkl', 'rb')
+x = pickle.load(f)
+f.close()
+
+# separate out the input to the encoder and the mlp
+# mlp is fed the last one hot encoded input
+x_mlp = [0]*num_samples
+x_encoder = [0]*num_samples
+
+for iter, seq in enumerate(x):
+    x_mlp[iter] = seq[-2]
+    # all but the last one hot encoded sequence
+    x_encoder[iter] = seq[0:-2]
+    #eos
+    x_encoder[iter].append(seq[-1])
+
+
 # seq len + 1 for alphabet + eos
 encoder_input_data = np.zeros((num_samples, max_seq_len-1,
                                max_seq_len+1), dtype="float32")
 
 mlp_input_data = np.zeros((num_samples, max_seq_len+1), dtype = "float32")
 
-# form the dataset x with the dense encoded orthogonal vectors
-
-for sample, sequence in enumerate(raw_sequence):
-    # create a numpy array for each sequence
-    seq_dense_encoded = np.zeros((1, max_seq_len+1))
-    for iter, item in enumerate(sequence):
-        seq_dense_encoded[iter] = orthonormal_vectors[item]
-    # EOS
-    seq_dense_encoded[iter+1] = orthonomal_vectors[-1]
-
-    encoder_input_data[sample] = seq_dense_encoded
-
-    mlp_input_data[sample] = y_mlp[sample]
+for i in range(num_samples):
+    seq_len = len(x_encoder[i])
+    for seq in range(seq_len):
+        encoder_input_data[i, seq] = x_encoder[i][seq]
+    mlp_input_data[i] = x_mlp[i]
 
 # train test split
 (encoder_input_data_train, encoder_input_data_test,
