@@ -15,6 +15,7 @@ from tensorflow.keras.layers import Conv1D
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import MaxPooling1D
+import pandas as pd
 
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
@@ -41,8 +42,23 @@ memory_model = "lstm"
 #memory_model = "CNN"
 #memory_model = "RNN"
 
-x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
-                                                                      num_tokens_rep)
+#x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
+#                                                                      num_tokens_rep)
+
+# load the orthonormal vectors
+orthonormal_vectors = np.load('orthonormal_vectors.npy')
+
+# read from csv file that has the sequence and metadata
+df = pd.read_csv('memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
+print(df.head())
+
+sequence_len = df['seq_len']
+raw_sequence = df['seq']
+rep_token_first_pos = df['rep_token_first_pos']
+token_repeated = df['query_token']
+y_mlp = df['target_val']
+
+# form the dataset x with the dense encoded orthogonal vectors
 
 
 num_samples = len(x)
@@ -66,7 +82,7 @@ for iter, seq in enumerate(x):
     x_encoder[iter].append(seq[-1])
 
 # plots on the properties of the generated sequences
-#plot_data(x, y, token_repeated, pos_first_token, repeat_dist, repeat_position)
+#plot_data(x, y, token_repeated, rep_token_first_pos, repeat_dist, repeat_position)
 
 
 
@@ -101,8 +117,8 @@ for i in range(num_samples):
 y_mlp_train, y_mlp_test,
 sequence_len_train, sequence_len_test,
 token_repeated_train, token_repeated_test,
-pos_first_token_train, pos_first_token_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
-                                 sequence_len, token_repeated, pos_first_token, test_size=0.3)
+rep_token_first_pos_train, rep_token_first_pos_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
+                                 sequence_len, token_repeated, rep_token_first_pos, test_size=0.3)
 
 
 if(verbose == 1):
@@ -111,7 +127,7 @@ if(verbose == 1):
                   y_mlp_train, y_mlp_test,
                   sequence_len_train, sequence_len_test,
                   token_repeated_train, token_repeated_test,
-                  pos_first_token_train, pos_first_token_test)
+                  rep_token_first_pos_train, rep_token_first_pos_test)
 
 # Define an input sequence and process it.
 encoder_inputs = keras.Input(shape=(None, num_encoder_tokens))
