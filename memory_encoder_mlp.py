@@ -202,7 +202,7 @@ sequence_len_arr = np.array(sequence_len_test)
 # balanced_acc_seq_len of 0 and 1 are meaningless
 balanced_acc_seq_len = [0]*(max_seq_len+1)
 
-for seq_len in range(2,max_seq_len+1):
+for seq_len in range(1,max_seq_len):
     seq_len_indices = []
     # get the indices of samples which have a particular sequence length
     seq_len_indices = np.where(sequence_len_arr == seq_len)
