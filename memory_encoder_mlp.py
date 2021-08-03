@@ -155,9 +155,9 @@ soft_max_input = tf.concat((encoder_states, mlp_encoded_op), 1)
 soft_max_shape = soft_max_input.shape[1]
 
 model_mlp = Sequential()
-#model_mlp.add(Dense(num_classes, input_shape = (None, soft_max_shape), activation='softmax'))
-model_mlp.add(Dense(50, input_shape=(None, soft_max_shape), activation='relu'))
-model_mlp.add(Dense(num_classes, activation='softmax'))
+model_mlp.add(Dense(num_classes, input_shape = (None, soft_max_shape), activation='softmax'))
+#model_mlp.add(Dense(50, input_shape=(None, soft_max_shape), activation='relu'))
+#model_mlp.add(Dense(num_classes, activation='softmax'))
 
 mlp_output = model_mlp(soft_max_input)
 # divide into training and test sets 80% and 20%
