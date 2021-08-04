@@ -179,7 +179,7 @@ es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
 y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
 
 # debug
-
+"""
 def check(test,array):
     for idx, x in enumerate(array):
         a = np.matmul(test, array.T)
@@ -212,7 +212,7 @@ else:
 print("the mlp output value is ")
 print(y_mlp_binary_train[0])
 exit()
-
+"""
 history = model.fit(
     [encoder_input_data_train, query_train],
     y_mlp_binary_train,
