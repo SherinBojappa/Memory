@@ -94,7 +94,7 @@ for i in range(num_samples):
 
 # train test split
 (encoder_input_data_train, encoder_input_data_test,
- mlp_input_data_train, mlp_input_data_test,
+ query_train, mlp_input_data_test,
  y_mlp_train, y_mlp_test,
  sequence_len_train, sequence_len_test,
  token_repeated_train, token_repeated_test,
@@ -102,33 +102,33 @@ for i in range(num_samples):
                                  sequence_len, token_repeated, rep_token_first_pos, test_size=0.3)
 
 # Define an input sequence and process it.
-encoder_inputs = keras.Input(shape=(None, max_seq_len+1))
-mlp_input = keras.Input(shape=(max_seq_len+1))
+main_sequence = keras.Input(shape=(None, max_seq_len + 1))
+query_input_node = keras.Input(shape=(max_seq_len + 1))
 
 if(memory_model == "lstm"):
     # Define an input sequence and process it.
-    encoder_inputs = keras.Input(shape=(None, max_seq_len+1))
-    mlp_input = keras.Input(shape=(max_seq_len+1))
+    main_sequence = keras.Input(shape=(None, max_seq_len + 1))
+    query_input_node = keras.Input(shape=(max_seq_len + 1))
 
     encoder = keras.layers.LSTM(latent_dim, return_state=True)
-    encoder_outputs, state_h, state_c = encoder(encoder_inputs)
+    encoder_outputs, state_h, state_c = encoder(main_sequence)
     # We discard `encoder_outputs` and only keep the states.
     encoder_states = tf.concat((state_h, state_c), 1)
     print("Encoder chosen is LSTM")
 elif(memory_model == "RNN"):
     # Define an input sequence and process it.
-    encoder_inputs = keras.Input(shape=(None, max_seq_len+1))
-    mlp_input = keras.Input(shape=(max_seq_len+1))
+    main_sequence = keras.Input(shape=(None, max_seq_len + 1))
+    query_input_node = keras.Input(shape=(max_seq_len + 1))
 
     encoder = keras.layers.SimpleRNN(latent_dim, return_state=True)
-    encoder_output, state = encoder(encoder_inputs)
+    encoder_output, state = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is simple RNN")
     print("Shape of the encoder output is: " + str(encoder_states))
 # FIXME BROKEN CNN RESHAPE
 elif(memory_model == "CNN"):
-    encoder_inputs = keras.Input(shape=(None, max_seq_len+1))
-    mlp_input = keras.Input(shape=(max_seq_len+1))
+    main_sequence = keras.Input(shape=(None, max_seq_len + 1))
+    query_input_node = keras.Input(shape=(max_seq_len + 1))
     encoder = Sequential()
     #encoder.add(keras.layers.Reshape((1, num_encoder_tokens * (num_encoder_tokens - 1))))
     encoder.add(keras.layers.Reshape((1, max_seq_len+1*(max_seq_len+1+1))))
@@ -139,34 +139,34 @@ elif(memory_model == "CNN"):
     #encoder.add(Flatten())
     encoder.add(keras.layers.Reshape((latent_dim,)))
     # before feeding the input reshape it to be 27
-    encoder_output = encoder(encoder_inputs)
+    encoder_output = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is CNN")
     print("Shape of the encoder output is: " + str(encoder_states))
 
-mlp_encoder = Sequential()
-mlp_ip_shape = mlp_input_data_train.shape[1]
-mlp_encoder.add(Dense(latent_dim, input_shape=(mlp_ip_shape,)))
-mlp_encoded_op = mlp_encoder(mlp_input)
+query_encoder = Sequential()
+query_ip_shape = query_train.shape[1]
+query_encoder.add(Dense(latent_dim, input_shape=(query_ip_shape,), activation='relu'))
+query_encoded_op = query_encoder(query_input_node)
 
 
 num_classes=2
 input_shape = encoder_states.shape[1]
 
-soft_max_input = tf.concat((encoder_states, mlp_encoded_op), 1)
-soft_max_shape = soft_max_input.shape[1]
+concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
+concatenated_input_shape = concatenated_input.shape[1]
 
-model_mlp = Sequential()
-model_mlp.add(Dense(num_classes, input_shape = (None, soft_max_shape), activation='softmax'))
+joint_mlp = Sequential()
+joint_mlp.add(Dense(num_classes, input_shape = (None, concatenated_input_shape), activation='softmax'))
 #model_mlp.add(Dense(50, input_shape=(None, soft_max_shape), activation='relu'))
 #model_mlp.add(Dense(num_classes, activation='softmax'))
 
-mlp_output = model_mlp(soft_max_input)
+joint_mlp_output = joint_mlp(concatenated_input)
 # divide into training and test sets 80% and 20%
 
 # Define the model that will turn
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-model = keras.Model([encoder_inputs, mlp_input], mlp_output)
+model = keras.Model([main_sequence, query_input_node], joint_mlp_output)
 model.summary()
 model.compile(
     optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
@@ -179,7 +179,7 @@ es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
 y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
 
 # debug
-"""
+
 def check(test,array):
     for idx, x in enumerate(array):
         a = np.matmul(test, array.T)
@@ -203,7 +203,7 @@ for token in encoder_input_data_train[0]:
         print("Token id not found")
 
 print("the query id is")
-query_id = check( mlp_input_data_train[0], orthonormal_vectors)
+query_id = check(query_train[0], orthonormal_vectors)
 if (query_id != -1):
     print(query_id)
 else:
@@ -211,10 +211,10 @@ else:
 
 print("the mlp output value is ")
 print(y_mlp_binary_train[0])
-"""
+exit()
 
 history = model.fit(
-    [encoder_input_data_train, mlp_input_data_train],
+    [encoder_input_data_train, query_train],
     y_mlp_binary_train,
     batch_size=batch_size,
     epochs=epochs,
