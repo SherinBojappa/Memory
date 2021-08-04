@@ -7,10 +7,10 @@ import pickle
 # only one repeated token
 num_tokens_rep = 1
 # need to also change this value in synthetic_dataset_encoder_mlp.py
-max_seq_len = 100
-num_instances_per_seq_len = 1000
+max_seq_len = 26
+num_instances_per_seq_len = 50
 
-x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
+x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len, orthonormal_vectors = generate_dataset(max_seq_len,
                                                                       num_tokens_rep, num_instances_per_seq_len)
 
 # for the encoder mlp problem we split the last token as the query token
@@ -34,3 +34,5 @@ csvfile.close()
 f = open('input_data.pkl', 'wb')
 pickle.dump(x, f, -1)
 f.close()
+
+np.save('orthonormal_vectors.npy', orthonormal_vectors)

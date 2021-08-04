@@ -21,7 +21,7 @@ raw_sequence = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
-max_seq_len = 100
+max_seq_len = 26
 # ignore entries 0,1 - seq length is one based with min=2 and max=max_seq_len
 samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
@@ -34,8 +34,8 @@ eos_decoder = 2
 
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 # generate max_seq_len + eos number of orthonomal vectors
-orthonomal_vectors = ortho_group.rvs(dim=(max_seq_len+1))
-np.save('orthonormal_vectors.npy', orthonomal_vectors)
+#orthonormal_vectors = ortho_group.rvs(dim=(max_seq_len+1))
+#np.save('orthonormal_vectors.npy', orthonormal_vectors)
 num_to_letter = {}
 num_to_letter[max_seq_len] = "eos"
 for num, letter in enumerate(alphabet):
@@ -85,7 +85,7 @@ def generate_labels(sequence):
     label[seq_len] = eos_decoder
     return label
 
-def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
+def generate_seq(seq_len, num_repeat, num_tokens_rep, positive, orthonormal_vectors):
     """
     :param seq_len: length of the sequence
     :param num_repeat: number of times the token needs to be repeated
@@ -116,7 +116,7 @@ def generate_seq(seq_len, num_repeat, num_tokens_rep, positive):
 
     return seq_list, rep_token, first_pos, seq_len
 
-def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
+def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive, orthonormal_vectors):
     seq_list = tuple(sequence)
     if seq_list in seq_dict:
         skipped = 1
@@ -133,13 +133,13 @@ def aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive):
             seq_token = [0] * (max_seq_len + 1)
             seq_token[token] = 1
         elif (encoding == "dense_orthonormal"):
-            seq_token = orthonomal_vectors[token]
+            seq_token = orthonormal_vectors[token]
 
         sequence_one_hot.append(seq_token)
     if(encoding == "one_hot"):
         sequence_one_hot.append(eos_seq_ip)
-    elif(encoding == "dense_orthonomal"):
-        sequence_one_hot.append(orthonomal_vectors[-1])
+    elif(encoding == "dense_orthonormal"):
+        sequence_one_hot.append(orthonormal_vectors[-1])
     x.append(sequence_one_hot)
 
     raw_sequence.append(sequence)
@@ -164,7 +164,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1, num_instances_per_seq_len
     :param max_seq_len:
     :return:
     """
-
+    orthonormal_vectors = ortho_group.rvs(dim=(max_seq_len + 1))
     # min seq_len is always 2 as we do not consider 1 length sequence
     min_seq_len = 2
     num_repeat = 1
@@ -175,7 +175,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1, num_instances_per_seq_len
     for seq_len in range(min_seq_len, max_seq_len+1):
         #positive examples with repetion
         #print("seq_len is" + str(seq_len))
-        num_samples = min((26*np.math.factorial(seq_len-1)), num_instances_per_seq_len)
+        num_samples = min((max_seq_len*np.math.factorial(seq_len-1)), num_instances_per_seq_len)
         # number of samples per sequence
         samples_seq[seq_len] = num_samples*2
         for sample in range(num_samples):
@@ -183,10 +183,10 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1, num_instances_per_seq_len
             sequence, rep_token, first_token_pos, seq_len = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
-                                                                       positive)
+                                                                       positive, orthonormal_vectors)
             # while aggregating inputs do not add repeating samples
             if sequence is not None:
-                skipped = aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
+                skipped = aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive, orthonormal_vectors)
 
             if(skipped == 0):
                 num_positive_examples =num_positive_examples + 1
@@ -195,16 +195,16 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1, num_instances_per_seq_len
                 sequence, rep_token, first_token_pos, seq_len = generate_seq(seq_len,
                                                                       num_repeat,
                                                                       num_tokens_rep,
-                                                                       positive)
+                                                                       positive, orthonormal_vectors)
 
-                skipped = aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive)
+                skipped = aggregate_inputs(sequence, rep_token, first_token_pos, seq_len, positive, orthonormal_vectors)
                 if(skipped == 0):
                     num_negative_examples = num_negative_examples + 1
 
     print("Number of positive examples are: " + str(num_positive_examples))
     print("Number of negative examples are: " + str(num_negative_examples))
 
-    return x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len
+    return x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len, orthonormal_vectors
 
 
 def decode_seq(x, y):

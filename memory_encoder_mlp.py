@@ -30,7 +30,7 @@ input_seq = 'synthetic'
 seq_len = 4
 num_repeat = 1
 num_tokens_rep = 1
-max_seq_len = 100
+max_seq_len = 26
 eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
@@ -47,7 +47,7 @@ memory_model = "lstm"
 
 # load the orthonormal vectors
 orthonormal_vectors = np.load('orthonormal_vectors.npy')
-print("The size of orthonomal vectors is " + str(orthonomal_vectors.shape))
+print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
 # read from csv file that has the sequence and metadata
 df = pd.read_csv('memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
 print(df.head())
@@ -79,8 +79,9 @@ for iter, seq in enumerate(x):
     x_encoder[iter].append(seq[-1])
 
 
-# seq len + 1 for alphabet + eos
-encoder_input_data = np.zeros((num_samples, max_seq_len-1,
+# seq len + 1 for alphabet + eos as orthonormal vectors are created with eos
+# max size of seq len is not max seq len - 1 for the actual sequence + 1 for eos
+encoder_input_data = np.zeros((num_samples, max_seq_len,
                                max_seq_len+1), dtype="float32")
 
 mlp_input_data = np.zeros((num_samples, max_seq_len+1), dtype = "float32")
@@ -178,18 +179,39 @@ es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
 y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
 
 # debug
+"""
+def check(test,array):
+    for idx, x in enumerate(array):
+        a = np.matmul(test, array.T)
+        idx = np.isclose(a, 1)
+        id = np.where(idx == True)
+        if np.size(id) == 0:
+            break
+        else:
+            return id[0][0]
+
+    return -1
+
+
 print("the sequence is ")
 for token in encoder_input_data_train[0]:
-    token_id = np.dot(orthonormal_vectors.T, orthonormal_vectors)
-    print(token_id.shape)
-    print(token_id[0])
-    exit()
+    #token_id = np.dot(orthonormal_vectors.T, orthonormal_vectors)
+    token_id = check(token, orthonormal_vectors)
+    if(token_id != -1):
+        print(token_id)
+    else:
+        print("Token id not found")
 
+print("the query id is")
+query_id = check( mlp_input_data_train[0], orthonormal_vectors)
+if (query_id != -1):
+    print(query_id)
+else:
+    print("Token id not found")
 
-query_id = np.dot(orthonomal_vectors, mlp_input_data_train[0])
-print("the query is")
-print(query_id)
-print("the target value is" + str(y_mlp_binary_train[0]))
+print("the mlp output value is ")
+print(y_mlp_binary_train[0])
+"""
 
 history = model.fit(
     [encoder_input_data_train, mlp_input_data_train],
