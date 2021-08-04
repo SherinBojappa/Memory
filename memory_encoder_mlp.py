@@ -19,10 +19,10 @@ import pandas as pd
 import pickle
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
-batch_size = 64  # Batch size for training.
+batch_size = 32  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 10
+epochs = 1
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -71,6 +71,7 @@ x_mlp = [0]*num_samples
 x_encoder = [0]*num_samples
 
 for iter, seq in enumerate(x):
+    # seq[-1] - eos seq[-2] - query token seq[0:-2] - seq
     x_mlp[iter] = seq[-2]
     # all but the last one hot encoded sequence
     x_encoder[iter] = seq[0:-2]
@@ -171,10 +172,24 @@ model.compile(
 )
 
 # early stopping
-es_cb = EarlyStopping(monitor="val_loss", patience=10, verbose=1,
+es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
 
 y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
+
+# debug
+print("the sequence is ")
+for token in encoder_input_data_train[0]:
+    token_id = np.dot(orthonormal_vectors.T, orthonormal_vectors)
+    print(token_id.shape)
+    print(token_id[0])
+    exit()
+
+
+query_id = np.dot(orthonomal_vectors, mlp_input_data_train[0])
+print("the query is")
+print(query_id)
+print("the target value is" + str(y_mlp_binary_train[0]))
 
 history = model.fit(
     [encoder_input_data_train, mlp_input_data_train],
