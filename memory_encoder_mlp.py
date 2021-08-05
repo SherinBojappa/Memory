@@ -146,18 +146,19 @@ elif(memory_model == "CNN"):
 
 query_encoder = Sequential()
 query_ip_shape = query_train.shape[1]
-query_encoder.add(Dense(latent_dim, input_shape=(query_ip_shape,), activation='relu'))
+query_encoder.add(Dense(latent_dim*2, input_shape=(query_ip_shape,), activation='relu'))
 query_encoded_op = query_encoder(query_input_node)
 
 
 num_classes=2
 input_shape = encoder_states.shape[1]
 
-concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
+#concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
+concatenated_input = tf.concat((encoder_states, query_encoded_op, encoder_states*query_encoder_op), 1)
 concatenated_input_shape = concatenated_input.shape[1]
 
 joint_mlp = Sequential()
-joint_mlp.add(Dense(num_classes, input_shape = (None, concatenated_input_shape), activation='softmax'))
+joint_mlp.add(Dense(num_classes, input_shape = (concatenated_input_shape,), activation='softmax'))
 #model_mlp.add(Dense(50, input_shape=(None, soft_max_shape), activation='relu'))
 #model_mlp.add(Dense(num_classes, activation='softmax'))
 
