@@ -154,7 +154,7 @@ num_classes=2
 input_shape = encoder_states.shape[1]
 
 #concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
-concatenated_input = tf.concat((encoder_states, query_encoded_op, encoder_states*query_encoder_op), 1)
+concatenated_input = tf.concat((encoder_states, query_encoded_op, encoder_states*query_encoded_op), 1)
 concatenated_input_shape = concatenated_input.shape[1]
 
 joint_mlp = Sequential()
