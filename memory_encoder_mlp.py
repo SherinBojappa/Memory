@@ -169,8 +169,14 @@ joint_mlp_output = joint_mlp(concatenated_input)
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = keras.Model([main_sequence, query_input_node], joint_mlp_output)
 model.summary()
+lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate=1e-2,
+    decay_steps=10000,
+    decay_rate=0.9)
+optimizer = keras.optimizers.SGD(learning_rate=lr_schedule)
+
 model.compile(
-    optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
+    optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
 )
 
 # early stopping
