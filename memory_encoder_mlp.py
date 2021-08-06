@@ -24,7 +24,7 @@ import pickle
 batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 1
+epochs = 30
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -32,7 +32,7 @@ input_seq = 'synthetic'
 seq_len = 4
 num_repeat = 1
 num_tokens_rep = 1
-max_seq_len = 26
+max_seq_len = 100
 eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
@@ -48,10 +48,10 @@ memory_model = "lstm"
 #                                                                      num_tokens_rep)
 
 # load the orthonormal vectors
-orthonormal_vectors = np.load('orthonormal_vectors_26.npy')
-print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
+#orthonormal_vectors = np.load('orthonormal_vectors_26.npy')
+#print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
 # read from csv file that has the sequence and metadata
-df = pd.read_csv('memory_retention_raw_26.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
+df = pd.read_csv('memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
 print(df.head())
 
 sequence_len = df['seq_len'].to_numpy()
@@ -63,7 +63,7 @@ num_samples = len(raw_sequence)
 
 
 # read the pickle file
-f = open('input_data_26.pkl', 'rb')
+f = open('input_data.pkl', 'rb')
 x = pickle.load(f)
 f.close()
 
@@ -300,10 +300,6 @@ for seq_len in range(1,max_seq_len):
     # get the indices of samples which have a particular sequence length
     seq_len_indices = np.where(sequence_len_arr == seq_len)
     # splice y_true and y_pred based on the seq length
-    print("sequence length indices are:" + str(seq_len_indices))
-    print("y true is " + str(y_true))
-    print("The dimensions of seq len indices are " + str(seq_len_indices[0].shape))
-    print("The dimensions of y_true are " + str(y_true.shape))
     y_true_seq_len = np.take(y_true, seq_len_indices[0])
     y_pred_seq_len = np.take(y_pred, seq_len_indices[0])
 

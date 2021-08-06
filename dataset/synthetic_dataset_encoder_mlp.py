@@ -21,7 +21,7 @@ raw_sequence = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
-max_seq_len = 26
+max_seq_len = 100
 # ignore entries 0,1 - seq length is one based with min=2 and max=max_seq_len
 samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
