@@ -54,11 +54,11 @@ print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
 df = pd.read_csv('memory_retention_raw_26.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
 print(df.head())
 
-sequence_len = df['seq_len']
+sequence_len = df['seq_len'].to_numpy()
 raw_sequence = df['seq']
 rep_token_first_pos = df['rep_token_first_pos']
 token_repeated = df['query_token']
-y_mlp = df['target_val']
+y_mlp = df['target_val'].to_numpy()
 num_samples = len(raw_sequence)
 
 
@@ -306,8 +306,10 @@ for seq_len in range(1,max_seq_len):
     print("The dimensions of y_true are " + str(y_true.shape))
     y_true_seq_len = np.take(y_true, seq_len_indices[0])
     y_pred_seq_len = np.take(y_pred, seq_len_indices[0])
-    balanced_acc_seq_len[seq_len] = balanced_accuracy_score(y_true_seq_len[0],
-                                                            y_pred_seq_len[0])
+
+    print("The number of sequences are: " + str(len(y_true_seq_len)))
+    balanced_acc_seq_len[seq_len] = balanced_accuracy_score(y_true_seq_len,
+                                                            y_pred_seq_len)
     print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
 
 # plot the balanced accuracy per sequence length
