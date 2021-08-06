@@ -15,14 +15,16 @@ from tensorflow.keras.layers import Conv1D
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import MaxPooling1D
+from tensorflow.keras.layers import BatchNormalization, Dropout, Activation
+#from keras.preprocessing.sequence import pad_sequences
 import pandas as pd
 import pickle
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
-batch_size = 32  # Batch size for training.
+batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 1
+epochs = 30
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -30,7 +32,7 @@ input_seq = 'synthetic'
 seq_len = 4
 num_repeat = 1
 num_tokens_rep = 1
-max_seq_len = 100
+max_seq_len = 26
 eos_encoder = np.zeros(max_seq_len+1)
 eos_encoder[0] = 1
 eos_decoder = 2
@@ -46,10 +48,10 @@ memory_model = "lstm"
 #                                                                      num_tokens_rep)
 
 # load the orthonormal vectors
-orthonormal_vectors = np.load('orthonormal_vectors.npy')
+orthonormal_vectors = np.load('orthonormal_vectors_26.npy')
 print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
 # read from csv file that has the sequence and metadata
-df = pd.read_csv('memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
+df = pd.read_csv('memory_retention_raw_26.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
 print(df.head())
 
 sequence_len = df['seq_len']
@@ -58,12 +60,28 @@ rep_token_first_pos = df['rep_token_first_pos']
 token_repeated = df['query_token']
 y_mlp = df['target_val']
 num_samples = len(raw_sequence)
-print("The total number of samples in the dataset is " + str(num_samples))
+
 
 # read the pickle file
-f = open('input_data.pkl', 'rb')
+f = open('input_data_26.pkl', 'rb')
 x = pickle.load(f)
 f.close()
+
+"""
+capped_max_seq_len = 25
+seq_id = np.where(sequence_len == capped_max_seq_len)
+max_index = seq_id[0][-1]
+#print("id is" + str(idx))
+#max_index = idx[0][-1]
+print("max_index is " + str(max_index))
+x = x[0:max_index+1]
+num_samples = len(x)
+print("The total number of samples are: " + str(num_samples))
+y_mlp = y_mlp[0:max_index+1]
+sequence_len = sequence_len[0:max_index+1]
+token_repeated = token_repeated[0:max_index+1]
+rep_token_first_pos = rep_token_first_pos[0:max_index+1]
+"""
 
 # separate out the input to the encoder and the mlp
 # mlp is fed the last one hot encoded input
@@ -91,6 +109,18 @@ for i in range(num_samples):
     for seq in range(seq_len):
         encoder_input_data[i, seq] = x_encoder[i][seq]
     mlp_input_data[i] = x_mlp[i]
+"""
+N = (num_samples//10000)*10000
+
+# train test split
+(encoder_input_data_train, encoder_input_data_test,
+ query_train, mlp_input_data_test,
+ y_mlp_train, y_mlp_test,
+ sequence_len_train, sequence_len_test,
+ token_repeated_train, token_repeated_test,
+ rep_token_first_pos_train, rep_token_first_pos_test) = train_test_split(encoder_input_data[:N], mlp_input_data[:N], y_mlp[:N],
+                                 sequence_len[:N], token_repeated[:N], rep_token_first_pos[:N], random_state=2, test_size=0.3)
+"""
 
 # train test split
 (encoder_input_data_train, encoder_input_data_test,
@@ -99,8 +129,10 @@ for i in range(num_samples):
  sequence_len_train, sequence_len_test,
  token_repeated_train, token_repeated_test,
  rep_token_first_pos_train, rep_token_first_pos_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
-                                 sequence_len, token_repeated, rep_token_first_pos, test_size=0.3)
+                                 sequence_len, token_repeated, rep_token_first_pos, random_state=2, test_size=0.3)
 
+print("The number of examples in the training data set is " + str(len(encoder_input_data_train)))
+print("The number of example in the test data set is " + str(len(encoder_input_data_test)))
 # Define an input sequence and process it.
 main_sequence = keras.Input(shape=(None, max_seq_len + 1))
 query_input_node = keras.Input(shape=(max_seq_len + 1))
@@ -154,13 +186,24 @@ num_classes=2
 input_shape = encoder_states.shape[1]
 
 #concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
-concatenated_input = tf.concat((encoder_states, query_encoded_op, encoder_states*query_encoded_op), 1)
-concatenated_input_shape = concatenated_input.shape[1]
-
+#concatenated_input = tf.concat((encoder_states, query_encoded_op, tf.reshape(tf.reduce_sum(encoder_states*query_encoded_op, axis=1),(-1,1))), 1)
+concatenated_input = tf.reshape(tf.reduce_sum(encoder_states*query_encoded_op, axis=1),(-1,1))
+#concatenated_input = tf.concat((encoder_states, query_encoded_op, tf.matmul(encoder_states, tf.transpose(query_encoded_op))), 1)
+#concatenated_input_shape = concatenated_input.shape[1]
+#concatenated_input_shape = batch_size+ latent_dim*4
+concatenated_input_shape = 1 #(latent_dim*4)+1
+print("The concatenated input shape is: " + str(concatenated_input_shape))
 joint_mlp = Sequential()
 joint_mlp.add(Dense(num_classes, input_shape = (concatenated_input_shape,), activation='softmax'))
-#model_mlp.add(Dense(50, input_shape=(None, soft_max_shape), activation='relu'))
-#model_mlp.add(Dense(num_classes, activation='softmax'))
+#from tensorflow.keras.layers.normalization import BatchNormalization
+#joint_mlp.add(BatchNormalization())
+#joint_mlp.add(Dense(100, input_shape=(concatenated_input_shape,), activation='relu')) #, activation='relu'))
+#joint_mlp.add(BatchNormalization())
+#joint_mlp.add(Activation('relu'))
+#joint_mlp.add(Dropout(0.2))
+#joint_mlp.add(Dense(1000, activation = 'relu'))
+#joint_mlp.add(Dense(50, activation = 'relu'))
+#joint_mlp.add(Dense(num_classes, activation='softmax'))
 
 joint_mlp_output = joint_mlp(concatenated_input)
 # divide into training and test sets 80% and 20%
@@ -176,7 +219,7 @@ lr_schedule = keras.optimizers.schedules.ExponentialDecay(
 optimizer = keras.optimizers.SGD(learning_rate=lr_schedule)
 
 model.compile(
-    optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
+    optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
 )
 
 # early stopping
