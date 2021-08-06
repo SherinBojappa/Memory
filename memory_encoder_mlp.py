@@ -24,7 +24,7 @@ import pickle
 batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 30
+epochs = 1
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -281,6 +281,10 @@ y_true = y_mlp_test
 y_test = model.predict([encoder_input_data_test, mlp_input_data_test])
 #y_pred = np.argmax(y_test, axis=1)
 y_pred = y_test>0.5
+print("The true values are:")
+print(y_true)
+print("The predicted values are: ")
+print(y_pred)
 
 # total balanced accuracy accross the entire test dataset
 balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
@@ -296,8 +300,12 @@ for seq_len in range(1,max_seq_len):
     # get the indices of samples which have a particular sequence length
     seq_len_indices = np.where(sequence_len_arr == seq_len)
     # splice y_true and y_pred based on the seq length
-    y_true_seq_len = np.take(y_true, seq_len_indices)
-    y_pred_seq_len = np.take(y_pred, seq_len_indices)
+    print("sequence length indices are:" + str(seq_len_indices))
+    print("y true is " + str(y_true))
+    print("The dimensions of seq len indices are " + str(seq_len_indices[0].shape))
+    print("The dimensions of y_true are " + str(y_true.shape))
+    y_true_seq_len = np.take(y_true, seq_len_indices[0])
+    y_pred_seq_len = np.take(y_pred, seq_len_indices[0])
     balanced_acc_seq_len[seq_len] = balanced_accuracy_score(y_true_seq_len[0],
                                                             y_pred_seq_len[0])
     print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
