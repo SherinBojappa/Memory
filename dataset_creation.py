@@ -7,7 +7,7 @@ import pickle
 # only one repeated token
 num_tokens_rep = 1
 # need to also change this value in synthetic_dataset_encoder_mlp.py
-max_seq_len = 100
+max_seq_len = 26
 num_instances_per_seq_len = 1000
 
 x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len, orthonormal_vectors = generate_dataset(max_seq_len,
@@ -17,7 +17,7 @@ x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len, orthon
 sequence_len = [length_seq -1 for length_seq in sequence_len]
 
 # for x the last sample consists of what is fed into the mlp y
-with open('memory_retention_raw.csv', 'w') as csvfile:
+with open('memory_retention_raw_26.csv', 'w') as csvfile:
     fieldnames = ['index', 'seq_len', 'seq', 'token_repeated', 'rep_token_first_pos', 'query_token', 'target_val' ]
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
@@ -31,8 +31,8 @@ with open('memory_retention_raw.csv', 'w') as csvfile:
 csvfile.close()
 
 # save x as a pickle file
-f = open('input_data.pkl', 'wb')
+f = open('input_data_26.pkl', 'wb')
 pickle.dump(x, f, -1)
 f.close()
 
-np.save('orthonormal_vectors.npy', orthonormal_vectors)
+np.save('orthonormal_vectors_26_512.npy', orthonormal_vectors)

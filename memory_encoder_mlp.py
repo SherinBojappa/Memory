@@ -100,9 +100,9 @@ for iter, seq in enumerate(x):
 # seq len + 1 for alphabet + eos as orthonormal vectors are created with eos
 # max size of seq len is not max seq len - 1 for the actual sequence + 1 for eos
 encoder_input_data = np.zeros((num_samples, max_seq_len,
-                               max_seq_len+1), dtype="float32")
+                               latent_dim*2), dtype="float32")
 
-mlp_input_data = np.zeros((num_samples, max_seq_len+1), dtype = "float32")
+mlp_input_data = np.zeros((num_samples, latent_dim*2), dtype = "float32")
 
 for i in range(num_samples):
     seq_len = len(x_encoder[i])
@@ -134,13 +134,13 @@ N = (num_samples//10000)*10000
 print("The number of examples in the training data set is " + str(len(encoder_input_data_train)))
 print("The number of example in the test data set is " + str(len(encoder_input_data_test)))
 # Define an input sequence and process it.
-main_sequence = keras.Input(shape=(None, max_seq_len + 1))
-query_input_node = keras.Input(shape=(max_seq_len + 1))
+main_sequence = keras.Input(shape=(None, latent_dim*2))
+query_input_node = keras.Input(shape=(latent_dim*2))
 
 if(memory_model == "lstm"):
     # Define an input sequence and process it.
-    main_sequence = keras.Input(shape=(None, max_seq_len + 1))
-    query_input_node = keras.Input(shape=(max_seq_len + 1))
+    main_sequence = keras.Input(shape=(None, latent_dim*2))
+    query_input_node = keras.Input(shape=(latent_dim*2))
 
     encoder = keras.layers.LSTM(latent_dim, return_state=True)
     encoder_outputs, state_h, state_c = encoder(main_sequence)
@@ -176,10 +176,10 @@ elif(memory_model == "CNN"):
     print("Encoder chosen is CNN")
     print("Shape of the encoder output is: " + str(encoder_states))
 
-query_encoder = Sequential()
-query_ip_shape = query_train.shape[1]
-query_encoder.add(Dense(latent_dim*2, input_shape=(query_ip_shape,), activation='relu'))
-query_encoded_op = query_encoder(query_input_node)
+#query_encoder = Sequential()
+#query_ip_shape = query_train.shape[1]
+#query_encoder.add(Dense(latent_dim*2, input_shape=(query_ip_shape,), activation='relu'))
+#query_encoded_op = query_encoder(query_input_node)
 
 
 num_classes=2
@@ -187,14 +187,14 @@ input_shape = encoder_states.shape[1]
 
 #concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
 #concatenated_input = tf.concat((encoder_states, query_encoded_op, tf.reshape(tf.reduce_sum(encoder_states*query_encoded_op, axis=1),(-1,1))), 1)
-concatenated_input = tf.reshape(tf.reduce_sum(encoder_states*query_encoded_op, axis=1),(-1,1))
+concatenated_output = tf.reshape(tf.reduce_sum(encoder_states*query_input_node, axis=1),(-1,1))
 #concatenated_input = tf.concat((encoder_states, query_encoded_op, tf.matmul(encoder_states, tf.transpose(query_encoded_op))), 1)
 #concatenated_input_shape = concatenated_input.shape[1]
 #concatenated_input_shape = batch_size+ latent_dim*4
-concatenated_input_shape = 1 #(latent_dim*4)+1
-print("The concatenated input shape is: " + str(concatenated_input_shape))
-joint_mlp = Sequential()
-joint_mlp.add(Dense(num_classes, input_shape = (concatenated_input_shape,), activation='softmax'))
+concatenated_output_shape = 1 #(latent_dim*4)+1
+print("The concatenated input shape is: " + str(concatenated_output_shape))
+#joint_mlp = Sequential()
+#joint_mlp.add(Dense(num_classes, input_shape = (concatenated_input_shape,), activation='softmax'))
 #from tensorflow.keras.layers.normalization import BatchNormalization
 #joint_mlp.add(BatchNormalization())
 #joint_mlp.add(Dense(100, input_shape=(concatenated_input_shape,), activation='relu')) #, activation='relu'))
@@ -205,12 +205,12 @@ joint_mlp.add(Dense(num_classes, input_shape = (concatenated_input_shape,), acti
 #joint_mlp.add(Dense(50, activation = 'relu'))
 #joint_mlp.add(Dense(num_classes, activation='softmax'))
 
-joint_mlp_output = joint_mlp(concatenated_input)
+#joint_mlp_output = joint_mlp(concatenated_input)
 # divide into training and test sets 80% and 20%
 
 # Define the model that will turn
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-model = keras.Model([main_sequence, query_input_node], joint_mlp_output)
+model = keras.Model([main_sequence, query_input_node], concatenated_output)
 model.summary()
 lr_schedule = keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=1e-2,
@@ -219,14 +219,14 @@ lr_schedule = keras.optimizers.schedules.ExponentialDecay(
 optimizer = keras.optimizers.SGD(learning_rate=lr_schedule)
 
 model.compile(
-    optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"]
+    optimizer="rmsprop", loss="binary_crossentropy", metrics=["accuracy"]
 )
 
 # early stopping
 es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
 
-y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
+#y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
 
 # debug
 """
@@ -265,7 +265,7 @@ exit()
 """
 history = model.fit(
     [encoder_input_data_train, query_train],
-    y_mlp_binary_train,
+    y_mlp_train,
     batch_size=batch_size,
     epochs=epochs,
     validation_split=0.3,
@@ -275,10 +275,12 @@ history = model.fit(
 print("Number of epochs run: " + str(len(history.history["loss"])))
 
 
-y_true = np.array(y_mlp_test, dtype="float32")
+#y_true = np.array(y_mlp_test, dtype="float32")
+y_true = y_mlp_test
 # test results
 y_test = model.predict([encoder_input_data_test, mlp_input_data_test])
-y_pred = np.argmax(y_test, axis=1)
+#y_pred = np.argmax(y_test, axis=1)
+y_pred = y_test>0.5
 
 # total balanced accuracy accross the entire test dataset
 balanced_accuracy = balanced_accuracy_score(y_true, y_pred)

@@ -21,7 +21,7 @@ raw_sequence = list()
 token_repeated = list()
 pos_first_token = list()
 sequence_len = list()
-max_seq_len = 100
+max_seq_len = 26
 # ignore entries 0,1 - seq length is one based with min=2 and max=max_seq_len
 samples_seq = [0] * (max_seq_len+1)
 eos_seq_ip = [0] * (max_seq_len + 1)
@@ -164,7 +164,7 @@ def generate_dataset(max_seq_len=26, num_tokens_rep=1, num_instances_per_seq_len
     :param max_seq_len:
     :return:
     """
-    orthonormal_vectors = ortho_group.rvs(dim=(max_seq_len + 1))
+    orthonormal_vectors = ortho_group.rvs(dim=(512))
     # min seq_len is always 2 as we do not consider 1 length sequence
     min_seq_len = 2
     num_repeat = 1
