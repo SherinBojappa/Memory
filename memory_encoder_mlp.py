@@ -38,7 +38,7 @@ eos_encoder[0] = 1
 eos_decoder = 2
 sos_decoder = 3
 verbose = 0
-
+padding = 'pre_padding'
 # memory model can be lstm, rnn, or cnn
 memory_model = "lstm"
 #memory_model = "CNN"
@@ -104,11 +104,24 @@ encoder_input_data = np.zeros((num_samples, max_seq_len,
 
 mlp_input_data = np.zeros((num_samples, latent_dim*2), dtype = "float32")
 
-for i in range(num_samples):
-    seq_len = len(x_encoder[i])
-    for seq in range(seq_len):
-        encoder_input_data[i, seq] = x_encoder[i][seq]
-    mlp_input_data[i] = x_mlp[i]
+if(padding == 'pre_padding'):
+    print("The shape of the encoder data is: " + str(encoder_input_data.shape))
+    for i in range(num_samples):
+        seq_len = len(x_encoder[i])
+        
+        for seq in range(seq_len):
+            # fill the elements in encoder_input_data in the reverse order,
+            # this ensures that zero padding is done before the sequence
+            encoder_input_data[i, max_seq_len - seq_len + seq] = x_encoder[i][seq]
+        mlp_input_data[i] = x_mlp[i]
+elif(padding == 'post_padding'):
+
+    for i in range(num_samples):
+        seq_len = len(x_encoder[i])
+        for seq in range(seq_len):
+            encoder_input_data[i, seq] = x_encoder[i][seq]
+        mlp_input_data[i] = x_mlp[i]
+
 """
 N = (num_samples//10000)*10000
 
