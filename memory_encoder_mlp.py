@@ -162,10 +162,10 @@ if(memory_model == "lstm"):
     print("Encoder chosen is LSTM")
 elif(memory_model == "RNN"):
     # Define an input sequence and process it.
-    main_sequence = keras.Input(shape=(None, max_seq_len + 1))
-    query_input_node = keras.Input(shape=(max_seq_len + 1))
+    main_sequence = keras.Input(shape=(None, latent_dim*2))
+    query_input_node = keras.Input(shape=(latent_dim*2))
 
-    encoder = keras.layers.SimpleRNN(latent_dim, return_state=True)
+    encoder = keras.layers.SimpleRNN(latent_dim*2, return_state=True)
     encoder_output, state = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is simple RNN")
