@@ -40,8 +40,8 @@ sos_decoder = 3
 verbose = 0
 padding = 'pre_padding'
 # memory model can be lstm, rnn, or cnn
-#memory_model = "lstm"
-memory_model = "CNN"
+memory_model = "lstm"
+#memory_model = "CNN"
 #memory_model = "RNN"
 
 #x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
@@ -322,6 +322,12 @@ for seq_len in range(1,max_seq_len):
                                                             y_pred_seq_len)
     print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
 
+# save the balanced accuracy per seq len
+f = open('balanced_acc_seq_len_'+memory_model+'.pkl', 'wb')
+pickle.dump(balanced_acc_seq_len, f, -1)
+f.close()
+
+"""
 # plot the balanced accuracy per sequence length
 x = np.arange(0,max_seq_len+1)
 plt.title("Balanced accuracy versus sequence length")
@@ -329,6 +335,7 @@ plt.xlabel("sequence length")
 plt.ylabel("balanced accuracy")
 plt.plot(x, balanced_acc_seq_len)
 plt.show()
+"""
 
 
 
