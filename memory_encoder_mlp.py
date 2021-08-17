@@ -40,8 +40,8 @@ sos_decoder = 3
 verbose = 0
 padding = 'pre_padding'
 # memory model can be lstm, rnn, or cnn
-memory_model = "lstm"
-#memory_model = "CNN"
+#memory_model = "lstm"
+memory_model = "CNN"
 #memory_model = "RNN"
 
 #x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
@@ -170,20 +170,21 @@ elif(memory_model == "RNN"):
     encoder_states = encoder_output
     print("Encoder chosen is simple RNN")
     print("Shape of the encoder output is: " + str(encoder_states))
-# FIXME BROKEN CNN RESHAPE
 elif(memory_model == "CNN"):
-    main_sequence = keras.Input(shape=(None, max_seq_len + 1))
-    query_input_node = keras.Input(shape=(max_seq_len + 1))
+    input_shape = (max_seq_len, latent_dim*2)
+    main_sequence = keras.Input(shape=(None, latent_dim*2))
+    query_input_node = keras.Input(shape=(latent_dim*2))
     encoder = Sequential()
-    #encoder.add(keras.layers.Reshape((1, num_encoder_tokens * (num_encoder_tokens - 1))))
-    encoder.add(keras.layers.Reshape((1, max_seq_len+1*(max_seq_len+1+1))))
-    encoder.add(keras.layers.Conv1D(filters = latent_dim, kernel_size = 1, activation='relu'))
-    #encoder.add(MaxPooling1D(pool_size=2))
+    # there are 256 different channels and each channel 7 tokens are taken at once, and convolution is performed
+    # dimesion of input is max_seq_len(100)*latent_dim*2(512) so after convolution the output size is max_seq_len because padding is same
+    # then padding must be such that the max value of 50 outputs are taken, so each filter has 2 outputs for max seq size = 100
+    # so total outputs = latent_dim(256)*2 = 512; since output is concatenated with token make sure that the dimensions are same
+    encoder.add(keras.layers.Conv1D(filters = latent_dim, kernel_size = 7, padding='same', activation='relu', input_shape=input_shape))
+    encoder.add(MaxPooling1D(pool_size=50))
 
     # flatten makes the shape as [None, None]
     #encoder.add(Flatten())
-    encoder.add(keras.layers.Reshape((latent_dim,)))
-    # before feeding the input reshape it to be 27
+    encoder.add(keras.layers.Reshape((latent_dim*2,)))
     encoder_output = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is CNN")
