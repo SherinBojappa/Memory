@@ -17,9 +17,46 @@ from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import MaxPooling1D
 from tensorflow.keras.layers import BatchNormalization, Dropout, Activation
 #from keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras import layers
 import pandas as pd
 import pickle
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
+
+# transformer block implementations
+class TransformerBlock(layers.Layer):
+    def __init__(self, embed_dim, num_heads, ff_dim, rate =0.1):
+        super(TransformerBlock, self).__init__()
+        self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim = embed_dim)
+        self.ffn = keras.Sequential(
+            [layers.Dense(ff_dim, activation="relu"), layers.Dense(embed_dim),]
+        )
+        self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = layers.Dropout(rate)
+        self.dropout2 = layers.Dropout(rate)
+
+    def call(self, inputs, training):
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.layernorm1(inputs + attn_output)
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output, training=training)
+        return self.layernorm2(out1 + ffn_output)
+
+class TokenAndPositionEmbedding(layers.Layer):
+    def __init__(self, maxlen, embed_dim):
+        super(TokenAndPositionEmbedding, self).__init__()
+        self.maxlen = maxlen
+        #self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim)
+        self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim)
+
+    def call(self, x):
+        #maxlen = tf.shape(x)[-1]
+
+        positions = tf.range(start=0, limit=self.maxlen, delta=1)
+        positions = self.pos_emb(positions)
+        #x = self.token_emb(x)
+        return x + positions
 
 batch_size = 50  # Batch size for training.
 #batch_size = 5
@@ -40,9 +77,10 @@ sos_decoder = 3
 verbose = 0
 padding = 'pre_padding'
 # memory model can be lstm, rnn, or cnn
-memory_model = "lstm"
+#memory_model = "lstm"
 #memory_model = "CNN"
 #memory_model = "RNN"
+memory_model = "transformer"
 
 #x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
 #                                                                      num_tokens_rep)
@@ -188,6 +226,27 @@ elif(memory_model == "CNN"):
     encoder_output = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is CNN")
+    print("Shape of the encoder output is: " + str(encoder_states))
+elif(memory_model == "transformer"):
+
+    embed_dim = latent_dim*2  # Embedding size for each token
+    num_heads = 2  # Number of attention heads
+    ff_dim = 8  # Hidden layer size in feed forward network inside transformer
+    maxlen = max_seq_len
+    #vocab_size = max_seq_len+1
+    main_sequence = keras.Input(shape=(None, latent_dim*2))
+    query_input_node = keras.Input(shape=(latent_dim*2))
+    #inputs = layers.Input(shape=(maxlen,))
+    embedding_layer = TokenAndPositionEmbedding(maxlen, embed_dim)
+    x = embedding_layer(main_sequence)
+    transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim)
+    x = transformer_block(x)
+    x = layers.GlobalAveragePooling1D()(x)
+    x = layers.Dropout(0.1)(x)
+    x = layers.Dense(20, activation="relu")(x)
+    x = layers.Dropout(0.1)(x)
+    encoder_output = layers.Dense(latent_dim*2, activation="softmax")(x)
+    encoder_states = encoder_output
     print("Shape of the encoder output is: " + str(encoder_states))
 
 #query_encoder = Sequential()
