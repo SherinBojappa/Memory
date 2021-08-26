@@ -89,7 +89,7 @@ memory_model = "transformer"
 #orthonormal_vectors = np.load('orthonormal_vectors_26.npy')
 #print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
 # read from csv file that has the sequence and metadata
-df = pd.read_csv('memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
+df = pd.read_csv('/workspace/Memory/memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
 print(df.head())
 
 sequence_len = df['seq_len'].to_numpy()
@@ -101,7 +101,7 @@ num_samples = len(raw_sequence)
 
 
 # read the pickle file
-f = open('input_data.pkl', 'rb')
+f = open('/workspace/Memory/input_data.pkl', 'rb')
 x = pickle.load(f)
 f.close()
 
