@@ -36,3 +36,5 @@ pickle.dump(x, f, -1)
 f.close()
 
 np.save('orthonormal_vectors_512.npy', orthonormal_vectors)
+raw_sequence = np.array(raw_sequence)
+np.save('raw_sequence.npy', raw_sequence)
