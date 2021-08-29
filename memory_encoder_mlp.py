@@ -22,6 +22,13 @@ import pandas as pd
 import pickle
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
+# memory model can be lstm, rnn, or cnn
+memory_model = "lstm"
+#memory_model = "CNN"
+#memory_model = "RNN"
+#memory_model = "transformer"
+#memory_model = 'transformer_no_orthonormal'
+
 # transformer block implementations
 class TransformerBlock(layers.Layer):
     def __init__(self, embed_dim, num_heads, ff_dim, rate =0.1):
@@ -44,18 +51,25 @@ class TransformerBlock(layers.Layer):
         return self.layernorm2(out1 + ffn_output)
 
 class TokenAndPositionEmbedding(layers.Layer):
-    def __init__(self, maxlen, embed_dim):
+    def __init__(self, maxlen, vocab_size, embed_dim):
         super(TokenAndPositionEmbedding, self).__init__()
-        self.maxlen = maxlen
-        #self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim)
+        if (memory_model != "transformer_no_orthonormal"):
+            self.maxlen = maxlen
+        # add encoding only when orthonormal encoding is not used
+        if(memory_model == "transformer_no_orthonormal"):
+            self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim)
         self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim)
 
     def call(self, x):
-        #maxlen = tf.shape(x)[-1]
-
-        positions = tf.range(start=0, limit=self.maxlen, delta=1)
+        if (memory_model == "transformer_no_orthonormal"):
+            maxlen = tf.shape(x)[-1]
+        if (memory_model != "transformer_no_orthonormal"):
+            positions = tf.range(start=0, limit=self.maxlen, delta=1)
+        else:
+            positions = tf.range(start=0, limit=maxlen, delta=1)
         positions = self.pos_emb(positions)
-        #x = self.token_emb(x)
+        if (memory_model == "transformer_no_orthonormal"):
+            x = self.token_emb(x)
         return x + positions
 
 batch_size = 50  # Batch size for training.
@@ -76,26 +90,14 @@ eos_decoder = 2
 sos_decoder = 3
 verbose = 0
 padding = 'pre_padding'
-# memory model can be lstm, rnn, or cnn
-#memory_model = "lstm"
-#memory_model = "CNN"
-#memory_model = "RNN"
-memory_model = "transformer"
 
-#x, y, y_mlp, raw_sequence, token_repeated, pos_first_token, sequence_len = generate_dataset(max_seq_len,
-#                                                                      num_tokens_rep)
-
-# load the orthonormal vectors
-#orthonormal_vectors = np.load('orthonormal_vectors_26.npy')
-#print("The size of orthonomal vectors is " + str(orthonormal_vectors.shape))
-# read from csv file that has the sequence and metadata
 df = pd.read_csv('/workspace/Memory/memory_retention_raw.csv', usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos', 'query_token', 'target_val'])
 print(df.head())
 
 sequence_len = df['seq_len'].to_numpy()
-raw_sequence = df['seq']
-rep_token_first_pos = df['rep_token_first_pos']
-token_repeated = df['query_token']
+raw_sequence = df['seq'].to_numpy()
+rep_token_first_pos = df['rep_token_first_pos'].to_numpy()
+token_repeated = df['query_token'].to_numpy()
 y_mlp = df['target_val'].to_numpy()
 num_samples = len(raw_sequence)
 
@@ -104,6 +106,37 @@ num_samples = len(raw_sequence)
 f = open('/workspace/Memory/input_data.pkl', 'rb')
 x = pickle.load(f)
 f.close()
+
+orthonormal_vectors = np.load('/workspace/Memory/orthonormal_vectors_512.npy')
+
+raw_sequence = np.load('raw_sequence.npy', allow_pickle=True)
+
+"""
+get the token id from the from the sequence, required for transformers
+"""
+def orthonormal_decode(dataset):
+    seq_dataset = []
+    for sequence in dataset:
+        seq = []
+        for token in sequence:
+            a = np.matmul(token, orthonormal_vectors.T)
+            idx = np.isclose(a,1)
+            id = np.where(idx == True)
+            if np.size(id) == 0:
+                token_id = 0
+            else:
+                token_id = id[0][0]
+                # do not append eos
+                if(token_id == 511):
+                    break
+            seq.append(token_id)
+        seq_dataset.append(seq)
+
+    return seq_dataset
+
+
+
+
 
 """
 capped_max_seq_len = 25
@@ -160,6 +193,10 @@ elif(padding == 'post_padding'):
             encoder_input_data[i, seq] = x_encoder[i][seq]
         mlp_input_data[i] = x_mlp[i]
 
+if(memory_model == "transformer_no_orthonormal"):
+    raw_sequence_padded = keras.preprocessing.sequence.pad_sequences(raw_sequence, maxlen=max_seq_len-1, value = 0)
+else:
+    raw_sequence_padded = raw_sequence
 """
 N = (num_samples//10000)*10000
 
@@ -179,8 +216,9 @@ N = (num_samples//10000)*10000
  y_mlp_train, y_mlp_test,
  sequence_len_train, sequence_len_test,
  token_repeated_train, token_repeated_test,
- rep_token_first_pos_train, rep_token_first_pos_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
-                                 sequence_len, token_repeated, rep_token_first_pos, random_state=2, test_size=0.3)
+ rep_token_first_pos_train, rep_token_first_pos_test,
+ raw_sequence_train, raw_sequence_test) = train_test_split(encoder_input_data, mlp_input_data, y_mlp,
+                                 sequence_len, token_repeated, rep_token_first_pos, raw_sequence_padded, random_state=2, test_size=0.3)
 
 print("The number of examples in the training data set is " + str(len(encoder_input_data_train)))
 print("The number of example in the test data set is " + str(len(encoder_input_data_test)))
@@ -248,6 +286,33 @@ elif(memory_model == "transformer"):
     encoder_output = layers.Dense(latent_dim*2, activation="softmax")(x)
     encoder_states = encoder_output
     print("Shape of the encoder output is: " + str(encoder_states))
+elif (memory_model == "transformer_no_orthonormal"):
+    embed_dim = 300  # Embedding size for each token
+    num_heads = 2  # Number of attention heads
+    ff_dim = 32  # Hidden layer size in feed forward network inside transformer
+    maxlen = max_seq_len
+    vocab_size = maxlen
+    main_sequence = layers.Input(shape=(maxlen-1,))
+    query_input_node = keras.Input(shape=(latent_dim * 2))
+
+    # max length is 99 - do not restrict number of tokens; doesnt include eos
+    # vocab_size is also 100 as there are 100 unique tokens
+    embedding_layer = TokenAndPositionEmbedding(maxlen-1, vocab_size, embed_dim)
+    x = embedding_layer(main_sequence)
+    transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim)
+    x = transformer_block(x)
+    x = layers.GlobalAveragePooling1D()(x)
+    x = layers.Dropout(0.1)(x)
+    x = layers.Dense(20, activation="relu")(x)
+    x = layers.Dropout(0.1)(x)
+    outputs = layers.Dense(latent_dim*2, activation="softmax")(x)
+    encoder_states = outputs
+
+    # encoder_input_data_train/test must now be decoded to have a list of token_ids
+    #encoder_input_data_train = np.array(orthonormal_decode(encoder_input_data_train))
+    #encoder_input_data_test = np.array(orthonormal_decode(encoder_input_data_test))
+    encoder_input_data_train = raw_sequence_train
+    encoder_input_data_test = raw_sequence_test
 
 #query_encoder = Sequential()
 #query_ip_shape = query_train.shape[1]
@@ -366,23 +431,34 @@ print(balanced_accuracy)
 # Find the balanced accuracy accross different sequence length
 sequence_len_arr = np.array(sequence_len_test)
 # balanced_acc_seq_len of 0 and 1 are meaningless
-balanced_acc_seq_len = [0]*(max_seq_len+1)
+balanced_acc_seq_len = np.zeros(shape=(max_seq_len-1, max_seq_len)) #[0]*(max_seq_len+1)
 
-for seq_len in range(1,max_seq_len):
-    seq_len_indices = []
+dist_arr = []
+rep_first_token_test = np.array(rep_token_first_pos_test)
+# dist_test == max_seq_len means there were no repeats, should be fine as we ignore
+# entries with max len later on
+dist_test = np.subtract(sequence_len_arr, np.add(rep_first_token_test, 1))
+
+for seq_len in range(1,max_seq_len-1):
+    #balanced_acc_seq_len.append([])
+    for dist in range(0, max_seq_len):
+
     # get the indices of samples which have a particular sequence length
-    seq_len_indices = np.where(sequence_len_arr == seq_len)
-    # splice y_true and y_pred based on the seq length
-    y_true_seq_len = np.take(y_true, seq_len_indices[0])
-    y_pred_seq_len = np.take(y_pred, seq_len_indices[0])
+        seq_len_indices = np.where((sequence_len_arr == seq_len) & (dist_test == dist))
 
-    print("The number of sequences are: " + str(len(y_true_seq_len)))
-    balanced_acc_seq_len[seq_len] = balanced_accuracy_score(y_true_seq_len,
-                                                            y_pred_seq_len)
-    print("Balanced accuracy for seq len {} is {}".format(seq_len, balanced_acc_seq_len[seq_len]))
+        # splice y_true and y_pred based on the seq length
+        y_true_seq_len = np.take(y_true, seq_len_indices[0])
+        y_pred_seq_len = np.take(y_pred, seq_len_indices[0])
+
+        print("The number of sequences are: " + str(len(y_true_seq_len)))
+        if len(y_true_seq_len) > 0:
+            balanced_acc_seq_len[seq_len][dist] = balanced_accuracy_score(y_true_seq_len,y_pred_seq_len)
+
+        print("Balanced accuracy for seq len {} and dist {} is {}".format(seq_len, dist, balanced_acc_seq_len[seq_len][dist]))
+
 
 # save the balanced accuracy per seq len
-f = open('balanced_acc_seq_len_'+memory_model+'.pkl', 'wb')
+f = open('balanced_acc_seq_len_dist_'+memory_model+'.pkl', 'wb')
 pickle.dump(balanced_acc_seq_len, f, -1)
 f.close()
 
