@@ -23,11 +23,11 @@ import pickle
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
 # memory model can be lstm, rnn, or cnn
-memory_model = "lstm"
+#memory_model = "lstm"
 #memory_model = "CNN"
 #memory_model = "RNN"
 #memory_model = "transformer"
-#memory_model = 'transformer_no_orthonormal'
+memory_model = 'transformer_no_orthonormal'
 
 # transformer block implementations
 class TransformerBlock(layers.Layer):
@@ -267,8 +267,8 @@ elif(memory_model == "CNN"):
     print("Shape of the encoder output is: " + str(encoder_states))
 elif(memory_model == "transformer"):
 
-    embed_dim = latent_dim*2  # Embedding size for each token
-    num_heads = 2  # Number of attention heads
+    embed_dim = 32  # Embedding size for each token
+    num_heads = 10  # Number of attention heads
     ff_dim = 8  # Hidden layer size in feed forward network inside transformer
     maxlen = max_seq_len
     #vocab_size = max_seq_len+1
@@ -283,12 +283,12 @@ elif(memory_model == "transformer"):
     x = layers.Dropout(0.1)(x)
     x = layers.Dense(20, activation="relu")(x)
     x = layers.Dropout(0.1)(x)
-    encoder_output = layers.Dense(latent_dim*2, activation="softmax")(x)
+    encoder_output = layers.Dense(latent_dim*2)(x)
     encoder_states = encoder_output
     print("Shape of the encoder output is: " + str(encoder_states))
 elif (memory_model == "transformer_no_orthonormal"):
-    embed_dim = 300  # Embedding size for each token
-    num_heads = 2  # Number of attention heads
+    embed_dim = 32  # Embedding size for each token
+    num_heads = 10  # Number of attention heads
     ff_dim = 32  # Hidden layer size in feed forward network inside transformer
     maxlen = max_seq_len
     vocab_size = maxlen
@@ -303,9 +303,7 @@ elif (memory_model == "transformer_no_orthonormal"):
     x = transformer_block(x)
     x = layers.GlobalAveragePooling1D()(x)
     x = layers.Dropout(0.1)(x)
-    x = layers.Dense(20, activation="relu")(x)
-    x = layers.Dropout(0.1)(x)
-    outputs = layers.Dense(latent_dim*2, activation="softmax")(x)
+    outputs = layers.Dense(latent_dim*2)(x)
     encoder_states = outputs
 
     # encoder_input_data_train/test must now be decoded to have a list of token_ids
