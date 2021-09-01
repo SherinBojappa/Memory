@@ -194,7 +194,11 @@ elif(padding == 'post_padding'):
         mlp_input_data[i] = x_mlp[i]
 
 if(memory_model == "transformer_no_orthonormal"):
-    raw_sequence_padded = keras.preprocessing.sequence.pad_sequences(raw_sequence, maxlen=max_seq_len-1, value = 0)
+    # remove the query token - the last token in raw_sequence
+    sequence_raw = []
+    for seq in raw_sequence:
+        sequence_raw.append(seq[:-1])
+    raw_sequence_padded = keras.preprocessing.sequence.pad_sequences(sequence_raw, maxlen=max_seq_len-1, value = 0)
 else:
     raw_sequence_padded = raw_sequence
 """
@@ -435,11 +439,12 @@ dist_arr = []
 rep_first_token_test = np.array(rep_token_first_pos_test)
 # dist_test == max_seq_len means there were no repeats, should be fine as we ignore
 # entries with max len later on
-dist_test = np.subtract(sequence_len_arr, np.add(rep_first_token_test, 1))
+rep_token_test = np.where(rep_first_token_test == -1, max_seq_len, rep_first_token_test)
+dist_test = np.subtract(sequence_len_arr, np.add(rep_token_test, 1))
 
 for seq_len in range(1,max_seq_len-1):
     #balanced_acc_seq_len.append([])
-    for dist in range(0, max_seq_len):
+    for dist in range(0, seq_len):
 
     # get the indices of samples which have a particular sequence length
         seq_len_indices = np.where((sequence_len_arr == seq_len) & (dist_test == dist))
