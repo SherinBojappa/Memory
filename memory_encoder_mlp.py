@@ -433,7 +433,7 @@ print(balanced_accuracy)
 # Find the balanced accuracy accross different sequence length
 sequence_len_arr = np.array(sequence_len_test)
 # balanced_acc_seq_len of 0 and 1 are meaningless
-balanced_acc_seq_len = np.zeros(shape=(max_seq_len-1, max_seq_len)) #[0]*(max_seq_len+1)
+balanced_acc_seq_len = np.zeros(shape=(max_seq_len, max_seq_len)) #[0]*(max_seq_len+1)
 
 dist_arr = []
 rep_first_token_test = np.array(rep_token_first_pos_test)
@@ -442,7 +442,7 @@ rep_first_token_test = np.array(rep_token_first_pos_test)
 rep_token_test = np.where(rep_first_token_test == -1, max_seq_len, rep_first_token_test)
 dist_test = np.subtract(sequence_len_arr, np.add(rep_token_test, 1))
 
-for seq_len in range(1,max_seq_len-1):
+for seq_len in range(1,max_seq_len):
     #balanced_acc_seq_len.append([])
     for dist in range(0, seq_len):
 
