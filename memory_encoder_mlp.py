@@ -20,14 +20,15 @@ from tensorflow.keras.layers import BatchNormalization, Dropout, Activation
 from tensorflow.keras import layers
 import pandas as pd
 import pickle
+from tensorflow.keras.optimizers import RMSprop
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
 # memory model can be lstm, rnn, or cnn
 #memory_model = "lstm"
-#memory_model = "CNN"
+memory_model = "CNN"
 #memory_model = "RNN"
 #memory_model = "transformer"
-memory_model = 'transformer_no_orthonormal'
+#memory_model = 'transformer_no_orthonormal'
 
 # transformer block implementations
 class TransformerBlock(layers.Layer):
@@ -75,7 +76,7 @@ class TokenAndPositionEmbedding(layers.Layer):
 batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 30
+epochs = 60
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -239,14 +240,16 @@ if(memory_model == "lstm"):
     encoder_outputs, state_h, state_c = encoder(main_sequence)
     # We discard `encoder_outputs` and only keep the states.
     encoder_states = tf.concat((state_h, state_c), 1)
+    lr = 0.000952250804827695
     print("Encoder chosen is LSTM")
 elif(memory_model == "RNN"):
     # Define an input sequence and process it.
     main_sequence = keras.Input(shape=(None, latent_dim*2))
     query_input_node = keras.Input(shape=(latent_dim*2))
-
-    encoder = keras.layers.SimpleRNN(latent_dim*2, return_state=True)
-    encoder_output, state = encoder(main_sequence)
+    encoder = Sequential()
+    encoder.add(keras.layers.SimpleRNN(1024, return_state=True))
+    encoder.add(keras.layers.Dense(512, activation='relu'))
+    encoder_output = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is simple RNN")
     print("Shape of the encoder output is: " + str(encoder_states))
@@ -260,6 +263,7 @@ elif(memory_model == "CNN"):
     # then padding must be such that the max value of 50 outputs are taken, so each filter has 2 outputs for max seq size = 100
     # so total outputs = latent_dim(256)*2 = 512; since output is concatenated with token make sure that the dimensions are same
     encoder.add(keras.layers.Conv1D(filters = latent_dim, kernel_size = 7, padding='same', activation='relu', input_shape=input_shape))
+    encoder.add(keras.layers.Dropout(0.3))
     encoder.add(MaxPooling1D(pool_size=50))
 
     # flatten makes the shape as [None, None]
@@ -269,6 +273,7 @@ elif(memory_model == "CNN"):
     encoder_states = encoder_output
     print("Encoder chosen is CNN")
     print("Shape of the encoder output is: " + str(encoder_states))
+    lr = 0.00012691763008376296
 elif(memory_model == "transformer"):
 
     embed_dim = 32  # Embedding size for each token
@@ -359,7 +364,7 @@ lr_schedule = keras.optimizers.schedules.ExponentialDecay(
 optimizer = keras.optimizers.SGD(learning_rate=lr_schedule)
 
 model.compile(
-    optimizer="rmsprop", loss="binary_crossentropy", metrics=["accuracy"]
+    optimizer=RMSprop(learning_rate=lr), loss="binary_crossentropy", metrics=["accuracy"]
 )
 
 # early stopping
