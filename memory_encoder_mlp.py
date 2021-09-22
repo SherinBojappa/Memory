@@ -76,7 +76,7 @@ class TokenAndPositionEmbedding(layers.Layer):
 batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
-epochs = 60
+epochs = 30
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -262,18 +262,23 @@ elif(memory_model == "CNN"):
     # dimesion of input is max_seq_len(100)*latent_dim*2(512) so after convolution the output size is max_seq_len because padding is same
     # then padding must be such that the max value of 50 outputs are taken, so each filter has 2 outputs for max seq size = 100
     # so total outputs = latent_dim(256)*2 = 512; since output is concatenated with token make sure that the dimensions are same
-    encoder.add(keras.layers.Conv1D(filters = latent_dim, kernel_size = 7, padding='same', activation='relu', input_shape=input_shape))
-    encoder.add(keras.layers.Dropout(0.3))
-    encoder.add(MaxPooling1D(pool_size=50))
+    encoder.add(keras.layers.Conv1D(filters = 64, kernel_size = 7, padding='same', activation='relu', input_shape=input_shape))
+    #encoder.add(keras.layers.Dropout(0.3))
+    #encoder.add(MaxPooling1D(pool_size=50))
 
     # flatten makes the shape as [None, None]
     #encoder.add(Flatten())
-    encoder.add(keras.layers.Reshape((latent_dim*2,)))
+    #encoder.add(keras.layers.Reshape((latent_dim*2,)))
+    encoder.add(Flatten())
+    encoder.add(keras.layers.Dense(latent_dim*2))
+    
+    
     encoder_output = encoder(main_sequence)
     encoder_states = encoder_output
     print("Encoder chosen is CNN")
     print("Shape of the encoder output is: " + str(encoder_states))
-    lr = 0.00012691763008376296
+    #lr = 0.00012691763008376296
+    lr = 7.201800744529144e-05
 elif(memory_model == "transformer"):
 
     embed_dim = 32  # Embedding size for each token
