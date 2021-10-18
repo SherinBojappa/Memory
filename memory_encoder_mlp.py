@@ -393,12 +393,13 @@ model.compile(
 es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
 
-checkpoint_filepath = '/tmp/checkpoint'
+checkpoint_filepath = "/tmp/checkpoint-{epoch:02d}-val_accuracy:.2f.hdf5"
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
-    monitor="val_loss",
+    monitor="val_accuracy",
     save_best_only=True,
-    mode="min"
+    mode="max",
+    verbose=1
 )
 
 #y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
