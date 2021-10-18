@@ -32,8 +32,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import RMSprop
 
 # memory model can be lstm, rnn, or cnn
-#memory_model = "lstm"
-memory_model = "CNN"
+memory_model = "lstm"
+#memory_model = "CNN"
 #memory_model = "RNN"
 #memory_model = "transformer"
 #memory_model = 'transformer_no_orthonormal'
@@ -265,12 +265,20 @@ def objective(trial):
     # Define an input sequence and process it.
     main_sequence = keras.Input(shape=(None, latent_dim * 2))
     query_input_node = keras.Input(shape=(latent_dim * 2))
+    
+    encoder = keras.Sequential()
+    # latent_dim needs to be twice the number in lstm
+    # encoder.add(keras.layers.SimpleRNN(latent_dim * 2, return_state=True))
+    #hidden_units = trial.suggest_int('units', 128, 1034)
+    hidden_units = trial.suggest_categorical('units', [32, 64, 128, 256, 512, 1024])
+    # encoder.add(keras.layers.SimpleRNN(latent_dim * 2))
+    encoder.add(keras.layers.LSTM(units=hidden_units))
+    encoder.add(keras.layers.Dense(units=512))
 
-    encoder = keras.layers.LSTM(latent_dim, return_state=True)
-    encoder_outputs, state_h, state_c = encoder(main_sequence)
+    encoder_outputs = encoder(main_sequence)
     # We discard `encoder_outputs` and only keep the states.
-    encoder_states = tf.concat((state_h, state_c), 1)
-
+    #encoder_states = tf.concat((state_h, state_c), 1)
+    encoder_states = encoder_outputs
     num_classes = 2
     input_shape = encoder_states.shape[1]
 
@@ -360,15 +368,73 @@ def objective_cnn(trial):
     # returns loss and metrics - accuracy
     return score[1]
 
+def objective_rnn(trial):
+    # Define an input sequence and process it.
+    main_sequence = keras.Input(shape=(None, latent_dim * 2))
+    query_input_node = keras.Input(shape=(latent_dim * 2))
+
+    encoder = keras.Sequential()
+    # latent_dim needs to be twice the number in lstm
+    # encoder.add(keras.layers.SimpleRNN(latent_dim * 2, return_state=True))
+    #hidden_units = trial.suggest_int('units', 128, 1034)
+    hidden_units = trial.suggest_categorical('units', [32, 64, 128, 256, 512, 1024])
+    # encoder.add(keras.layers.SimpleRNN(latent_dim * 2))
+    encoder.add(keras.layers.SimpleRNN(units=hidden_units))
+    encoder.add(keras.layers.Dense(units=512, activation='relu'))
+
+    # encoder_output, state = encoder(main_sequence)
+    encoder_output = encoder(main_sequence)
+    encoder_states = encoder_output
+    encoder.summary()
+    print("Encoder chosen is simple RNN")
+    print("Shape of the encoder output is: " + str(encoder_states))
+
+    num_classes = 2
+    input_shape = encoder_states.shape[1]
+
+    concatenated_output = tf.reshape(
+        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
+
+    concatenated_output_shape = 1  # (latent_dim*4)+1
+    print("The concatenated input shape is: " + str(concatenated_output_shape))
+
+    # Define the model that will turn
+    # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
+    model = keras.Model([main_sequence, query_input_node], concatenated_output)
+
+    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
+
+    model.compile(
+        optimizer=RMSprop(learning_rate=lr), loss="binary_crossentropy",
+        metrics=["accuracy"]
+    )
+
+    history = model.fit(
+        [encoder_input_data_train, query_train],
+        y_mlp_train,
+        validation_data=(
+            [encoder_input_data_valid, mlp_input_data_valid], y_mlp_valid),
+        batch_size=batch_size,
+        epochs=epochs,
+        verbose=False,
+    )
+
+    # Evaluate the model accuracy on the validation set.
+    score = model.evaluate([encoder_input_data_valid, mlp_input_data_valid],
+                           y_mlp_valid, verbose=0)
+    # returns loss and metrics - accuracy
+    return score[1]
 
 
 if __name__ == "__main__":
     # maximize accuracy
     study = optuna.create_study(direction="maximize")
     if(memory_model == 'lstm'):
-        study.optimize(objective, n_trials=10)
+        study.optimize(objective, n_trials=50)
     elif(memory_model == 'CNN'):
         study.optimize(objective_cnn, n_trials=50)
+    elif (memory_model == 'RNN'):
+        study.optimize(objective_rnn, n_trials=50, timeout=600)
     print("Number of finished trials: {}".format(len(study.trials)))
 
     print("Best trial:")
