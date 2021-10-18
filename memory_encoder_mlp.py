@@ -395,7 +395,7 @@ es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
 # adding params like epoch and val accuracy will save all the models
 #checkpoint_filepath = "./models/checkpoint-{epoch:02d}-{val_accuracy:.2f}.hdf5"
-checkpoint_filepath = 'best_model'
+checkpoint_filepath = 'best_model_'+str(memory_model)
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     monitor="val_accuracy",
@@ -470,10 +470,10 @@ print("The test loss is ")
 print(test_loss)
 
 # save the validation and test accuracy and loss for further plotting
-np.save('test_accuracy', np.array(test_acc))
-np.save('test_loss', np.array(test_loss))
-np.save('val_accuracy', np.array(history.history["val_accuracy"]))
-np.save('val_loss', np.array(history.history["val_loss"]))
+np.save('test_accuracy_'+str(memory_model), np.array(test_acc))
+np.save('test_loss_' + str(memory_model), np.array(test_loss))
+np.save('val_accuracy_'+str(memory_model), np.array(history.history["val_accuracy"]))
+np.save('val_loss_'+str(memory_model), np.array(history.history["val_loss"]))
 
 
 #y_true = np.array(y_mlp_test, dtype="float32")
