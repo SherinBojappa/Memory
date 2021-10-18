@@ -1,5 +1,10 @@
 .idea
 s2s
+*.csv
+*.pkl
+*.npy
+*.png
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
