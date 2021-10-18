@@ -393,7 +393,7 @@ model.compile(
 es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
 
-checkpoint_filepath = "/tmp/checkpoint-{epoch:02d}-val_accuracy:.2f.hdf5"
+checkpoint_filepath = "./checkpoint-{epoch:02d}-{val_accuracy:.2f}.hdf5"
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     monitor="val_accuracy",
