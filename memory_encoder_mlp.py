@@ -469,6 +469,12 @@ print(test_acc)
 print("The test loss is ")
 print(test_loss)
 
+# save the validation and test accuracy and loss for further plotting
+np.save('test_accuracy', np.array(test_acc))
+np.save('test_loss', np.array(test_loss))
+np.save('val_accuracy', np.array(history.history["val_accuracy"]))
+np.save('val_loss', np.array(history.history["val_loss"]))
+
 
 #y_true = np.array(y_mlp_test, dtype="float32")
 y_true = y_mlp_test
