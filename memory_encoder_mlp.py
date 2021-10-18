@@ -21,6 +21,7 @@ from tensorflow.keras import layers
 import pandas as pd
 import pickle
 from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.callbacks import Callback
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
 # memory model can be lstm, rnn, or cnn
@@ -392,15 +393,26 @@ model.compile(
 # early stopping
 es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
-
-checkpoint_filepath = "./models/checkpoint-{epoch:02d}-{val_accuracy:.2f}.hdf5"
+# adding params like epoch and val accuracy will save all the models
+#checkpoint_filepath = "./models/checkpoint-{epoch:02d}-{val_accuracy:.2f}.hdf5"
+checkpoint_filepath = 'best_model'
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     monitor="val_accuracy",
     mode="max",
     verbose=1,
-    save_best_only=True,
+    save_best_only=True
 )
+
+
+class TestCallback(Callback):
+    def __init__(self, test_data):
+        self.test_data = test_data
+
+    def on_epoch_end(self, epoch, logs={}):
+        x, y = self.test_data
+        loss, acc = self.model.evaluate(x, y, verbose=0)
+        print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
 #y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
 
@@ -445,7 +457,7 @@ history = model.fit(
     batch_size=batch_size,
     epochs=epochs,
     validation_split=0.3,
-    callbacks=[model_checkpoint_callback]
+    callbacks=[model_checkpoint_callback, TestCallback((encoder_input_data_test, mlp_input_data_test))]
 )
 
 print("Number of epochs run: " + str(len(history.history["loss"])))
