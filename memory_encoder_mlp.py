@@ -404,7 +404,8 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     save_best_only=True
 )
 
-
+test_acc = []
+test_loss = []
 class TestCallback(Callback):
     def __init__(self, test_data):
         self.test_data = test_data
@@ -412,6 +413,8 @@ class TestCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         x, y = self.test_data
         loss, acc = self.model.evaluate(x, y, verbose=0)
+        test_acc.append(acc)
+        test_loss.append(loss)
         print('\nTesting loss: {}, acc: {}\n'.format(loss, acc))
 
 #y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
@@ -461,6 +464,10 @@ history = model.fit(
 )
 
 print("Number of epochs run: " + str(len(history.history["loss"])))
+print("The test accuracy is " )
+print(test_acc)
+print("The test loss is ")
+print(test_loss)
 
 
 #y_true = np.array(y_mlp_test, dtype="float32")
