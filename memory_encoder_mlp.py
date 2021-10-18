@@ -393,6 +393,14 @@ model.compile(
 es_cb = EarlyStopping(monitor="val_loss", patience=100, verbose=1,
                       mode="min")
 
+checkpoint_filepath = '/tmp/checkpoint'
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=checkpoint_filepath,
+    monitor="val_loss",
+    save_best_only=True,
+    mode="min"
+)
+
 #y_mlp_binary_train = to_categorical(np.array(y_mlp_train), dtype="float32")
 
 # debug
@@ -436,7 +444,7 @@ history = model.fit(
     batch_size=batch_size,
     epochs=epochs,
     validation_split=0.3,
-    callbacks=[es_cb]
+    callbacks=[model_checkpoint_callback]
 )
 
 print("Number of epochs run: " + str(len(history.history["loss"])))
