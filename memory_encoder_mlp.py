@@ -24,8 +24,8 @@ from tensorflow.keras.optimizers import RMSprop
 # dataset is fra.txt which is downloaded from http://www.manythings.org/anki/fra-eng.zip
 
 # memory model can be lstm, rnn, or cnn
-#memory_model = "lstm"
-memory_model = "CNN"
+memory_model = "lstm"
+#memory_model = "CNN"
 #memory_model = "RNN"
 #memory_model = "transformer"
 #memory_model = 'transformer_no_orthonormal'
@@ -235,24 +235,34 @@ if(memory_model == "lstm"):
     # Define an input sequence and process it.
     main_sequence = keras.Input(shape=(None, latent_dim*2))
     query_input_node = keras.Input(shape=(latent_dim*2))
-
-    encoder = keras.layers.LSTM(latent_dim, return_state=True)
+    #encoder = Sequential()
+    dense_layer = Sequential()
+    encoder = keras.layers.LSTM(128, return_state=True)
+    #encoder.add(keras.layers.Dense(512))
     encoder_outputs, state_h, state_c = encoder(main_sequence)
+    #state_h, state_c = encoder(main_sequence)
     # We discard `encoder_outputs` and only keep the states.
     encoder_states = tf.concat((state_h, state_c), 1)
-    lr = 0.000952250804827695
+    dense_layer.add(keras.layers.Dense(768))
+    dense_layer.add(keras.layers.Dense(512))
+    encoder_states = dense_layer(encoder_states)
+    lr = 0.0013378606854350151
     print("Encoder chosen is LSTM")
 elif(memory_model == "RNN"):
     # Define an input sequence and process it.
     main_sequence = keras.Input(shape=(None, latent_dim*2))
     query_input_node = keras.Input(shape=(latent_dim*2))
     encoder = Sequential()
-    encoder.add(keras.layers.SimpleRNN(1024, return_state=True))
-    encoder.add(keras.layers.Dense(512, activation='relu'))
+    encoder.add(keras.layers.SimpleRNN(256))
+    encoder.add(keras.layers.Dense(1024, activation='relu'))
+    encoder.add(keras.layers.Dense(512))
     encoder_output = encoder(main_sequence)
     encoder_states = encoder_output
+    encoder.summary()
+    
     print("Encoder chosen is simple RNN")
     print("Shape of the encoder output is: " + str(encoder_states))
+    lr = 1.0465692011515144e-05
 elif(memory_model == "CNN"):
     input_shape = (max_seq_len, latent_dim*2)
     main_sequence = keras.Input(shape=(None, latent_dim*2))
@@ -366,6 +376,8 @@ print("The concatenated input shape is: " + str(concatenated_output_shape))
 # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
 model = keras.Model([main_sequence, query_input_node], concatenated_output)
 model.summary()
+
+
 lr_schedule = keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=1e-2,
     decay_steps=10000,
