@@ -464,10 +464,6 @@ history = model.fit(
 )
 
 print("Number of epochs run: " + str(len(history.history["loss"])))
-print("The test accuracy is " )
-print(test_acc)
-print("The test loss is ")
-print(test_loss)
 
 # save the validation and test accuracy and loss for further plotting
 np.save('test_accuracy_'+str(memory_model), np.array(test_acc))
@@ -477,18 +473,21 @@ np.save('val_loss_'+str(memory_model), np.array(history.history["val_loss"]))
 
 
 # load the best model which is saved
-model = keras.models.load_model(checkpoint_filepath)
-
+#model = keras.models.load_model(checkpoint_filepath)
+#print("loaded the best model")
 #y_true = np.array(y_mlp_test, dtype="float32")
 y_true = y_mlp_test
 # test results
+print("starting the prediction")
 y_test = model.predict([encoder_input_data_test, mlp_input_data_test])
 #y_pred = np.argmax(y_test, axis=1)
 y_pred = y_test>0.5
+"""
 print("The true values are:")
 print(y_true)
 print("The predicted values are: ")
 print(y_pred)
+"""
 
 # total balanced accuracy accross the entire test dataset
 balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
@@ -506,12 +505,13 @@ rep_first_token_test = np.array(rep_token_first_pos_test)
 rep_token_test = np.where(rep_first_token_test == -1, max_seq_len, rep_first_token_test)
 dist_test = np.subtract(sequence_len_arr, np.add(rep_token_test, 1))
 
+print("computing optimal tau")
 mean_loss = []
 # compute x - seq_len*dist
 avg_test_acc = balanced_accuracy_score(y_true, y_pred)
 x = [((s*d*1.0)/avg_test_acc) for s, d in zip(sequence_len_test, dist_test)]
 test_accs = np.array(y_true) & np.array(y_pred)
-print(test_accs.squeeze().tolist())
+#print(test_accs.squeeze().tolist())
 test_accs = [0.1 if acc <1. else 0.9 for acc in test_accs.test_accs.squeeze().tolist()]
 
 # gaussian
@@ -523,6 +523,7 @@ tau = num*1.0/den
 
 
 # compute l2 loss
+print("computing l2 loss")
 f_gauss = np.exp(-1*tau*np.sum(np.pow(x,2)))
 f_gauss_loss = np.mean(np.pow((f_gauss - test_accs), 2))
 mean_loss.append(f_gauss_loss)
