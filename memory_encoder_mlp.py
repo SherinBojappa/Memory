@@ -510,8 +510,8 @@ mean_loss = []
 # compute x - seq_len*dist
 avg_test_acc = balanced_accuracy_score(y_true, y_pred)
 x = [((s*d*1.0)/avg_test_acc) for s, d in zip(sequence_len_test, dist_test)]
-test_accs = np.array(y_true) & np.array(y_pred)
-#print(test_accs.squeeze().tolist())
+test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
+print(test_accs.shape)
 test_accs = [0.1 if acc <1. else 0.9 for acc in test_accs.squeeze().tolist()]
 
 # gaussian
