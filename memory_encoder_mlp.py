@@ -78,7 +78,7 @@ batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
 #epochs = 200
-epochs = 30
+epochs = 3
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
@@ -522,6 +522,8 @@ f_gauss_loss = np.mean(np.pow((f_gauss - test_accs), 2))
 mean_loss.append(f_gauss_loss)
 
 
+# save mean loss
+np.save('mean_loss', mean_loss)
 
 
 
