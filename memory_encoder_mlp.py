@@ -516,7 +516,7 @@ test_accs = [0.1 if acc <1. else 0.9 for acc in test_accs.squeeze().tolist()]
 
 # gaussian
 num = -1.0*np.sum(np.log(test_accs))
-den = np.sum(np.pow(x,2))
+den = np.sum(np.power(x,2))
 tau = num*1.0/den
 
 # laplacian
@@ -524,8 +524,8 @@ tau = num*1.0/den
 
 # compute l2 loss
 print("computing l2 loss")
-f_gauss = np.exp(-1*tau*np.sum(np.pow(x,2)))
-f_gauss_loss = np.mean(np.pow((f_gauss - test_accs), 2))
+f_gauss = np.exp(-1*tau*np.sum(np.power(x,2)))
+f_gauss_loss = np.mean(np.power((f_gauss - test_accs), 2))
 mean_loss.append(f_gauss_loss)
 
 kernels = ['Gaussian', 'Laplacian', 'Linear', 'Cosine', 'Quadratic', 'Secant']
