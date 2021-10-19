@@ -477,7 +477,7 @@ np.save('val_loss_'+str(memory_model), np.array(history.history["val_loss"]))
 
 
 # load the best model which is saved
-model = keras.models.load_models(checkpoint_filepath)
+model = keras.models.load_model(checkpoint_filepath)
 
 #y_true = np.array(y_mlp_test, dtype="float32")
 y_true = y_mlp_test
