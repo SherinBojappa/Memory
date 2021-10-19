@@ -511,19 +511,28 @@ mean_loss = []
 avg_test_acc = balanced_accuracy_score(y_true, y_pred)
 x = [((s*d*1.0)/avg_test_acc) for s, d in zip(sequence_len_test, dist_test)]
 test_accs = np.array(y_true) & np.array(y_pred)
-test_accs = [0.1 if acc <1. else 0.9 for acc in test_accs.tolist()]
+print(test_accs.squeeze().tolist())
+test_accs = [0.1 if acc <1. else 0.9 for acc in test_accs.test_accs.squeeze().tolist()]
+
+# gaussian
 num = -1.0*np.sum(np.log(test_accs))
 den = np.sum(np.pow(x,2))
 tau = num*1.0/den
+
+# laplacian
+
 
 # compute l2 loss
 f_gauss = np.exp(-1*tau*np.sum(np.pow(x,2)))
 f_gauss_loss = np.mean(np.pow((f_gauss - test_accs), 2))
 mean_loss.append(f_gauss_loss)
 
-#kernels = ['Gaussian', 'Laplacian', 'Linear', 'Cosine', 'Quadratic', 'Secant']
-#min_val = min(mean_loss)
-#min_index = mean_loss.index(min_val)
+kernels = ['Gaussian', 'Laplacian', 'Linear', 'Cosine', 'Quadratic', 'Secant']
+min_val = min(mean_loss)
+min_index = mean_loss.index(min_val)
+
+print("The best function is ")
+print(kernels[min_index])
 
 
 # save mean loss
