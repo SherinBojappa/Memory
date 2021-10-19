@@ -78,7 +78,7 @@ batch_size = 50  # Batch size for training.
 #batch_size = 5
 #epochs = 5  # Number of epochs to train for.
 #epochs = 200
-epochs = 200
+epochs = 30
 latent_dim = 256  # Latent dimensionality of the encoding space.
 # Path to the data txt file on disk.
 data_path = "fra.txt"
