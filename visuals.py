@@ -4,8 +4,8 @@ import numpy as np
 from scipy.stats import norm
 
 max_seq_len = 100
-#plot_type = None
-plot_type = '2d'
+plot_type = None
+#plot_type = '2d'
 # plot_type = '3d'
 # plot_type = '2d_image'
 # load the pickle file
@@ -48,6 +48,29 @@ f_rnn.close()
 f_trans = open('acc_trans.pkl', 'rb')
 acc_model_trans = pickle.load(f_trans)
 f_trans.close()
+
+test_acc = np.load('/Users/sherin/Desktop/test_accuracy_lstm.npy')
+val_acc = np.load('/Users/sherin/Desktop/val_accuracy_lstm.npy')
+
+# x = seq_len*intervening_tokens/test_acc
+x = []
+for seq_len in range(1, max_seq_len):
+    for dist_idx in range(0, seq_len):
+        x.append(acc_model_lstm[seq_len][dist_idx])
+
+print("The value of x is ")
+print(x)
+
+test_strength = np.mean(test_acc)
+
+
+x = [i / test_strength for i in x]
+print("The value of x is ")
+print(x)
+
+#return the best fitting function of x now
+
+
 """
 f_trans = open('balanced_acc_seq_len_dist_transformer_no_orthonormal.pkl', 'rb')
 acc_trans = pickle.load(f_trans)
@@ -239,63 +262,66 @@ def objective_secant(x, tau, b):
     return (2/(np.exp(-tau*np.power(x, 2))) + (np.exp(tau*np.power(x, 2)))+b)
 
 
-popt, _ = curve_fit(objective_line, x_values, y_values)
-a, b = popt
-print('y = %.5f * x + %.5f' % (a, b))
+def curve_fitting():
+    popt, _ = curve_fit(objective_line, x_values, y_values)
+    a, b = popt
+    print('y = %.5f * x + %.5f' % (a, b))
 
-tau_laplacian, _ = curve_fit(objective_lap, x_values, y_values)
-tau_lap, b_lap = tau_laplacian
-
-
-tau_gaussian, _ = curve_fit(objective_gaussian, x_values, y_values)
-tau_gaus, b_gaus = tau_gaussian
+    tau_laplacian, _ = curve_fit(objective_lap, x_values, y_values)
+    tau_lap, b_lap = tau_laplacian
 
 
-tau_linear, _ = curve_fit(objective_linear, x_values, y_values)
-tau_linear, b_linear = tau_linear
+    tau_gaussian, _ = curve_fit(objective_gaussian, x_values, y_values)
+    tau_gaus, b_gaus = tau_gaussian
 
 
-tau_cosine, _ = curve_fit(objective_cosine, x_values, y_values)
-tau_cosine, b_cosine = tau_cosine
-
-tau_quadratic, _ = curve_fit(objective_quadratic, x_values, y_values)
-tau_quadratic, b_quadratic = tau_quadratic
-
-tau_secant, _ = curve_fit(objective_secant, x_values, y_values)
-tau_secant, b_secant = tau_secant
+    tau_linear, _ = curve_fit(objective_linear, x_values, y_values)
+    tau_linear, b_linear = tau_linear
 
 
-# plot the data points and the curve which is fitted
-plt.scatter(x_values, y_values)
+    tau_cosine, _ = curve_fit(objective_cosine, x_values, y_values)
+    tau_cosine, b_cosine = tau_cosine
 
-# calculate the output of the curve for each of the x points
-#y_curve = objective_line(x_values, a, b)
-y_gaussian = objective_gaussian(x_values, tau_gaus, b_gaus)
-y_lap = objective_gaussian(x_values, tau_lap, b_lap)
-y_linear = objective_linear(x_values, tau_linear, b_linear)
-y_cosine = objective_cosine(x_values, tau_cosine, b_cosine)
-y_quadratic = objective_quadratic(x_values, tau_quadratic, b_quadratic)
-y_secant = objective_secant(x_values, tau_secant, b_secant)
+    tau_quadratic, _ = curve_fit(objective_quadratic, x_values, y_values)
+    tau_quadratic, b_quadratic = tau_quadratic
+
+    tau_secant, _ = curve_fit(objective_secant, x_values, y_values)
+    tau_secant, b_secant = tau_secant
 
 
-plt.title("curve fitting to estimate memory retention curve")
-#plt_line, = plt.plot(x_values, y_curve, '--', color='red', label='line')
+    # plot the data points and the curve which is fitted
+    plt.scatter(x_values, y_values)
 
-plt_gaussian, = plt.plot(x_values, y_gaussian, '-', color='cyan',
-                         label='Gaussian')
-plt_lap, = plt.plot(x_values, y_lap, '-', color='black',
-                         label='Laplacian')
+    # calculate the output of the curve for each of the x points
+    #y_curve = objective_line(x_values, a, b)
+    y_gaussian = objective_gaussian(x_values, tau_gaus, b_gaus)
+    y_lap = objective_gaussian(x_values, tau_lap, b_lap)
+    y_linear = objective_linear(x_values, tau_linear, b_linear)
+    y_cosine = objective_cosine(x_values, tau_cosine, b_cosine)
+    y_quadratic = objective_quadratic(x_values, tau_quadratic, b_quadratic)
+    y_secant = objective_secant(x_values, tau_secant, b_secant)
 
-plt_linear, = plt.plot(x_values, y_linear, '_', color='magenta',
-                       label='Linear')
 
-plt_cosine, = plt.plot(x_values, y_cosine, '-', color='blue',
-                       label='Cosine')
-plt_quadratic, = plt.plot(x_values, y_quadratic, '_', color='green',
-                          label='Quadratic')
-plt_secant, = plt.plot(x_values, y_secant, '_', color='red',
-                       label = 'Secant')
+    plt.title("curve fitting to estimate memory retention curve")
+    #plt_line, = plt.plot(x_values, y_curve, '--', color='red', label='line')
 
-#plt.legend(handles=[plt_line, plt_gaussian, plt_lap, plt_linear, plt_cosine, plt_secant])
-plt.legend(handles=[plt_gaussian, plt_lap, plt_linear, plt_cosine, plt_secant])
-plt.show()
+    plt_gaussian, = plt.plot(x_values, y_gaussian, '-', color='cyan',
+                             label='Gaussian')
+    plt_lap, = plt.plot(x_values, y_lap, '-', color='black',
+                             label='Laplacian')
+
+    plt_linear, = plt.plot(x_values, y_linear, '_', color='magenta',
+                           label='Linear')
+
+    plt_cosine, = plt.plot(x_values, y_cosine, '-', color='blue',
+                           label='Cosine')
+    plt_quadratic, = plt.plot(x_values, y_quadratic, '_', color='green',
+                              label='Quadratic')
+    plt_secant, = plt.plot(x_values, y_secant, '_', color='red',
+                           label = 'Secant')
+
+    #plt.legend(handles=[plt_line, plt_gaussian, plt_lap, plt_linear, plt_cosine, plt_secant])
+    plt.legend(handles=[plt_gaussian, plt_lap, plt_linear, plt_cosine, plt_secant])
+    plt.show()
+
+
