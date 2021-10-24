@@ -73,7 +73,7 @@ class TokenAndPositionEmbedding(layers.Layer):
 
 
 def load_dataset():
-    df = pd.read_csv('/workspace/Memory/memory_retention_raw.csv',
+    df = pd.read_csv('/workspace/memory_clean/Memory/memory_retention_raw.csv',
                      usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos',
                               'query_token', 'target_val'])
     print(df.head())
@@ -84,11 +84,11 @@ def load_dataset():
     target_y = df['target_val'].to_numpy()
 
     # read the pickle file
-    f = open('/workspace/Memory/input_data.pkl', 'rb')
+    f = open('/workspace/memory_clean/Memory/input_data.pkl', 'rb')
     x = pickle.load(f)
     f.close()
     orth_vectors = np.load(
-        '/workspace/Memory/orthonormal_vectors_512.npy')
+        '/workspace/memory_clean/Memory/orthonormal_vectors_512.npy')
 
     ip_sequence = np.load('raw_sequence.npy', allow_pickle=True)
     num_samples = len(raw_sequence)
