@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.callbacks import EarlyStopping
+#from tensorflow.keras.callbacks import EarlyStopping
 from dataset.synthetic_dataset_encoder_mlp import *
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import balanced_accuracy_score, recall_score
@@ -72,27 +72,41 @@ class TokenAndPositionEmbedding(layers.Layer):
         return x + positions
 
 
-def load_dataset():
-    df = pd.read_csv('/workspace/memory_clean/Memory/memory_retention_raw.csv',
+def load_dataset(args):
+    #df = pd.read_csv('/workspace/memory_clean/Memory/memory_retention_raw.csv',
+    #                 usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos',
+    #                          'query_token', 'target_val'])
+    if args.debug == 1:
+        df = pd.read_csv(args.root_location + "memory_retention_raw_26.csv",
+                         usecols=['index', 'seq_len', 'seq',
+                                  'rep_token_first_pos',
+                                  'query_token', 'target_val'])
+    else:
+        df = pd.read_csv(args.root_location + "memory_retention_raw.csv",
                      usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos',
                               'query_token', 'target_val'])
     print(df.head())
     len_seq = df['seq_len'].to_numpy()
-    # raw_sequence = df['seq'].to_numpy()
+    raw_sequence = df['seq'].to_numpy()
     rep_token_first_pos = df['rep_token_first_pos'].to_numpy()
     token_rep = df['query_token'].to_numpy()
     target_y = df['target_val'].to_numpy()
 
     # read the pickle file
-    f = open('/workspace/memory_clean/Memory/input_data.pkl', 'rb')
+    if args.debug == 1:
+        f = open(args.root_location + 'input_data_26.pkl', 'rb')
+        orth_vectors = np.load(args.root_location + 'orthonormal_vectors_26.npy')
+    else:
+        f = open(args.root_location + 'input_data.pkl', 'rb')
+        orth_vectors = np.load(
+            args.root_location + 'orthonormal_vectors_512.npy')
     x = pickle.load(f)
     f.close()
-    orth_vectors = np.load(
-        '/workspace/memory_clean/Memory/orthonormal_vectors_512.npy')
-
-    ip_sequence = np.load('raw_sequence.npy', allow_pickle=True)
-    num_samples = len(raw_sequence)
-
+    ip_sequence = np.load(args.root_location + 'raw_sequence.npy', allow_pickle=True)
+    num_samples = len(x)
+    raw_sample_length = len(raw_sequence)
+    print("Number of samples {}".format(num_samples))
+    print("Number of samples in raw sequence {}".format(raw_sample_length))
     return x, num_samples, len_seq, token_rep, rep_token_first_pos, \
            ip_sequence, target_y, orth_vectors
 
@@ -128,7 +142,7 @@ This function parses and pads the data
 """
 
 
-def process_data(latent_dim, padding, memory_model, num_samples, x):
+def process_data(latent_dim, padding, memory_model, num_samples, x, raw_sequence):
     # separate out the input to the encoder and the mlp
     # mlp is fed the last one hot encoded input
     x_mlp = [0] * num_samples
@@ -518,14 +532,19 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_len_test):
 
 
 def main(args):
+
+    if args.debug == 1:
+        args.root_location = '/Users/sherin/Documents/memory_retention/'
+    else:
+        args.root_location = '/workspace/memory_clean/Memory/'
     print("Loading the dataset")
     x, num_samples, sequence_len, token_repeated, rep_token_first_pos, \
-    raw_sequence, target_y, orth_vectors = load_dataset()
+    raw_sequence, target_y, orth_vectors = load_dataset(args)
 
     print("processing the dataset")
     encoder_input_data, query_data, raw_sequence_padded = \
         process_data(args.latent_dim, args.padding, args.nn_model, num_samples,
-                     x)
+                     x, raw_sequence)
 
     print("Creating train and test split")
 
@@ -591,13 +610,16 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("nn_model", help="neural network model to be used")
-    parser.add_argument("epochs", help="Number of epochs to be run for")
-    parser.add_argument("batch_size", help="Number of samples in one batch")
-    parser.add_argument("latent_dim", help="size of the memory encoding")
-    parser.add_argument("padding", help="Type of padding, pre-padding or "
+    parser.add_argument("nn_model", default="lstm", type=str, help="neural network model to be used")
+    parser.add_argument("epochs",  default=1, type=int, help="Number of epochs to be run for")
+    parser.add_argument("batch_size",  default=50, type=int, help="Number of samples in one batch")
+    parser.add_argument("latent_dim",  default=256, type=int, help="size of the memory encoding")
+    parser.add_argument("padding", default="post_padding", type=str, help="Type of padding, pre-padding or "
                                         "post-padding")
-    parser.add_argument("max_seq_len", help="Maximum sequence length")
+    parser.add_argument("max_seq_len",  default=26, type=int, help="Maximum sequence length")
+    parser.add_argument("debug", type=int, default=1, help="is it debug")
     args = parser.parse_args()
+
+    print(args)
 
     main(args)
