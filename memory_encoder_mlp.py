@@ -142,7 +142,7 @@ This function parses and pads the data
 """
 
 
-def process_data(latent_dim, padding, memory_model, num_samples, x, raw_sequence):
+def process_data(max_seq_len, latent_dim, padding, memory_model, num_samples, x, raw_sequence):
     # separate out the input to the encoder and the mlp
     # mlp is fed the last one hot encoded input
     x_mlp = [0] * num_samples
@@ -196,7 +196,7 @@ def process_data(latent_dim, padding, memory_model, num_samples, x, raw_sequence
     return encoder_input_data, mlp_input_data, raw_sequence_padded
 
 
-def define_nn_model(memory_model, latent_dim, raw_sequence_train,
+def define_nn_model(max_seq_len, memory_model, latent_dim, raw_sequence_train,
                     raw_sequence_test):
     # Define an input sequence and process it.
     main_sequence = keras.Input(shape=(None, latent_dim * 2))
@@ -387,8 +387,8 @@ def train_model(batch_size, epochs, memory_model, model,
         batch_size=batch_size,
         epochs=epochs,
         validation_split=0.3,
-        callbacks=[model_checkpoint_callback,
-                   TestCallback((encoder_input_data_test, query_test))]
+        callbacks=[model_checkpoint_callback] #,
+        #           TestCallback((encoder_input_data_test, query_test))]
     )
 
     print("Number of epochs run: " + str(len(history.history["loss"])))
@@ -413,7 +413,7 @@ def predict_model(model, target_y_test, encoder_input_data_test,
     return y_pred
 
 
-def compute_save_metrics(memory_model, y_true, y_pred, sequence_len_test,
+def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred, sequence_len_test,
                          rep_token_first_pos_test):
     # total balanced accuracy accross the entire test dataset
     balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
@@ -543,7 +543,7 @@ def main(args):
 
     print("processing the dataset")
     encoder_input_data, query_data, raw_sequence_padded = \
-        process_data(args.latent_dim, args.padding, args.nn_model, num_samples,
+        process_data(args.max_seq_len, args.latent_dim, args.padding, args.nn_model, num_samples,
                      x, raw_sequence)
 
     print("Creating train and test split")
@@ -573,7 +573,7 @@ def main(args):
 
     # define the neural network model
     print("defining the Neural Network")
-    model = define_nn_model(args.nn_model, args.latent_dim, raw_sequence_train,
+    model = define_nn_model(args.max_seq_len, args.nn_model, args.latent_dim, raw_sequence_train,
                             raw_sequence_test)
 
     # train and save the best model
@@ -595,7 +595,7 @@ def main(args):
                            query_test)
 
     # compute accuracy based on seq len and number of intervening tokens
-    dist_test, balanced_accuracy = compute_save_metrics(args.nn_model,
+    dist_test, balanced_accuracy = compute_save_metrics(args.max_seq_len, args.nn_model,
                                                         target_y_test, y_pred,
                                                         sequence_len_test,
                                                         rep_token_first_pos_test)
