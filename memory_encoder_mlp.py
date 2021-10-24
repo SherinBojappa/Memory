@@ -589,7 +589,7 @@ def main(args):
                                   sequence_len_test)
 
 
-if __name__ == "__main":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("nn_model", help="neural network model to be used")
     parser.add_argument("epochs", help="Number of epochs to be run for")
