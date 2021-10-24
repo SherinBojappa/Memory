@@ -610,14 +610,14 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("nn_model", default="lstm", type=str, help="neural network model to be used")
-    parser.add_argument("epochs",  default=1, type=int, help="Number of epochs to be run for")
-    parser.add_argument("batch_size",  default=50, type=int, help="Number of samples in one batch")
-    parser.add_argument("latent_dim",  default=256, type=int, help="size of the memory encoding")
-    parser.add_argument("padding", default="post_padding", type=str, help="Type of padding, pre-padding or "
+    parser.add_argument("--nn_model", default="lstm", type=str, help="neural network model to be used")
+    parser.add_argument("--epochs",  default=1, type=int, help="Number of epochs to be run for")
+    parser.add_argument("--batch_size",  default=50, type=int, help="Number of samples in one batch")
+    parser.add_argument("--latent_dim",  default=256, type=int, help="size of the memory encoding")
+    parser.add_argument("--padding", default="post_padding", type=str, help="Type of padding, pre-padding or "
                                         "post-padding")
-    parser.add_argument("max_seq_len",  default=26, type=int, help="Maximum sequence length")
-    parser.add_argument("debug", type=int, default=1, help="is it debug")
+    parser.add_argument("--max_seq_len",  default=26, type=int, help="Maximum sequence length")
+    parser.add_argument("--debug", type=int, default=1, help="is it debug")
     args = parser.parse_args()
 
     print(args)
