@@ -508,7 +508,21 @@ dist_test = np.subtract(sequence_len_arr, np.add(rep_token_test, 1))
 print("computing optimal tau")
 mean_loss = []
 # compute x - seq_len*dist
+
+
 avg_test_acc = balanced_accuracy_score(y_true, y_pred)
+#throughout training - take average error
+# earlyon maybe a different model is better and maybe at the end a diff
+# model is good - good to capture
+# do this on the validation data
+
+# epochs1 - k use validation acc as strength of model
+# at teh end use test acc as strength of model
+# s and d normalize - s - 1 - 100  -> 0.01 - 1 d - 0.01 - 1
+# use validation acc instead of test acc - best validation acc
+# best epoch try all functions - both papers on val data
+# then do this for every epoch - val data
+# dont use test data to tune hyperparams
 x = [((s*d*1.0)/avg_test_acc) for s, d in zip(sequence_len_test, dist_test)]
 test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
 print(test_accs.shape)
@@ -519,12 +533,10 @@ num = -1.0*np.sum(np.log(test_accs))
 den = np.sum(np.power(x,2))
 tau = num*1.0/den
 
-# laplacian
-
-
 # compute l2 loss
 print("computing l2 loss")
 f_gauss = np.exp(-1*tau*np.sum(np.power(x,2)))
+# test_acc b/w 0 and 1
 f_gauss_loss = np.mean(np.power((f_gauss - test_accs), 2))
 mean_loss.append(f_gauss_loss)
 
