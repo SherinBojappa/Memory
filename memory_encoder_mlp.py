@@ -217,6 +217,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_sequence_train,
         dense_layer.add(keras.layers.Dense(768))
         dense_layer.add(keras.layers.Dense(512))
         encoder_states = dense_layer(encoder_states)
+
         lr = 0.0013378606854350151
         print("Encoder chosen is LSTM")
     elif memory_model == "RNN":
@@ -326,19 +327,24 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_sequence_train,
     num_classes = 2
     input_shape = encoder_states.shape[1]
 
-    # concatenated_input = tf.concat((encoder_states, query_encoded_op), 1)
-    # concatenated_input = tf.concat((encoder_states, query_encoded_op, tf.reshape(tf.reduce_sum(encoder_states*query_encoded_op, axis=1),(-1,1))), 1)
-    concatenated_output = tf.reshape(
-        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
-    # concatenated_input = tf.concat((encoder_states, query_encoded_op, tf.matmul(encoder_states, tf.transpose(query_encoded_op))), 1)
-    # concatenated_input_shape = concatenated_input.shape[1]
-    # concatenated_input_shape = batch_size+ latent_dim*4
+    #concatenated_output = tf.reshape(
+    #    tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
+
     concatenated_output_shape = 1  # (latent_dim*4)+1
     print("The concatenated input shape is: " + str(concatenated_output_shape))
 
+    similarity_net = Sequential()
+    similarity_net.add(keras.layers.Concatenate(axis=1))
+    similarity_net.add(keras.layers.Dense(1,
+                       activation=keras.activations.sigmoid))
+    similarity_output = similarity_net([encoder_states, query_input_node])
+
+    similarity_net.summary()
+    # construct another model to learn the similarities between the encoded
+    # input and the query vector
     # Define the model that will turn
     # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-    model = keras.Model([main_sequence, query_input_node], concatenated_output)
+    model = keras.Model([main_sequence, query_input_node], similarity_output)
     model.summary()
 
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
@@ -534,7 +540,7 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_len_test):
 def main(args):
 
     if args.debug == 1:
-        args.root_location = '/Users/sherin/Documents/memory_retention/'
+        args.root_location = '/Users/sherin/Documents/research/server_version_memory/Memory/'
     else:
         args.root_location = '/workspace/memory_clean/Memory/'
     print("Loading the dataset")
@@ -587,7 +593,7 @@ def main(args):
 
     # load the best model after training is complete
     print("loading the best model")
-    model = keras.models.load_model(checkpoint_filepath)
+    #model = keras.models.load_model(checkpoint_filepath)
 
     # test the model on novel data
     print("predicting on novel inputs")
