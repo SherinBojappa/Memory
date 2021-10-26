@@ -663,11 +663,19 @@ def main(args):
     # model is able to recall a previously seen item or not, so remove the
     # negative instances : where the query token is not previously seen by the
     # model
+    negative_samples = np.where(target_y_test == 0)
+
+
+    target_y_test_pos_samples = np.delete(target_y_test, negative_samples[0])
+    y_pred_pos_samples = np.delete(y_pred, negative_samples[0])
+    dist_pos_samples = np.delete(dist_test, negative_samples[0])
+    seq_len_test_pos_samples = np.delete(sequence_len_test, negative_samples[0])
+
 
     # learn which kernel best models the test accuracy
     print("Finding the best kernel to model the test accuracy")
-    kernel, tau = kernel_matching(target_y_test, y_pred, dist_test,
-                                  sequence_len_test)
+    kernel, tau = kernel_matching(target_y_test_pos_samples, y_pred_pos_samples,
+                                  dist_pos_samples, seq_len_test_pos_samples)
 
 
 if __name__ == "__main__":
