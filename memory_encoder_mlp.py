@@ -514,8 +514,10 @@ def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
         den = np.sum(np.power(x, 2))
 
     if kern == "Secant":
+        # num = np.sum(np.log(1. / np.sum(test_accs) + np.sqrt(
+        #     1. / np.sum(np.subtract(np.power(test_accs, 2), 1.)))))
         num = np.sum(np.log(1. / np.sum(test_accs) + np.sqrt(
-            1. / np.sum(np.subtract(np.power(test_accs, 2), 1.)))))
+             np.subtract(np.sum((1. / np.power(test_accs, 2))), 1.))))
         den = np.sum(np.power(x, 2))
 
     tau = num * 1.0 / den
