@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import tensorflow as tf
 from tensorflow import keras
-#from tensorflow.keras.callbacks import EarlyStopping
+# from tensorflow.keras.callbacks import EarlyStopping
 from dataset.synthetic_dataset_encoder_mlp import *
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import balanced_accuracy_score, recall_score
@@ -73,7 +73,7 @@ class TokenAndPositionEmbedding(layers.Layer):
 
 
 def load_dataset(args):
-    #df = pd.read_csv('/workspace/memory_clean/Memory/memory_retention_raw.csv',
+    # df = pd.read_csv('/workspace/memory_clean/Memory/memory_retention_raw.csv',
     #                 usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos',
     #                          'query_token', 'target_val'])
     if args.debug == 1:
@@ -83,8 +83,9 @@ def load_dataset(args):
                                   'query_token', 'target_val'])
     else:
         df = pd.read_csv(args.root_location + "memory_retention_raw.csv",
-                     usecols=['index', 'seq_len', 'seq', 'rep_token_first_pos',
-                              'query_token', 'target_val'])
+                         usecols=['index', 'seq_len', 'seq',
+                                  'rep_token_first_pos',
+                                  'query_token', 'target_val'])
     print(df.head())
     len_seq = df['seq_len'].to_numpy()
     raw_sequence = df['seq'].to_numpy()
@@ -95,14 +96,16 @@ def load_dataset(args):
     # read the pickle file
     if args.debug == 1:
         f = open(args.root_location + 'input_data_26.pkl', 'rb')
-        orth_vectors = np.load(args.root_location + 'orthonormal_vectors_26.npy')
+        orth_vectors = np.load(
+            args.root_location + 'orthonormal_vectors_26.npy')
     else:
         f = open(args.root_location + 'input_data.pkl', 'rb')
         orth_vectors = np.load(
             args.root_location + 'orthonormal_vectors_512.npy')
     x = pickle.load(f)
     f.close()
-    ip_sequence = np.load(args.root_location + 'raw_sequence.npy', allow_pickle=True)
+    ip_sequence = np.load(args.root_location + 'raw_sequence.npy',
+                          allow_pickle=True)
     num_samples = len(x)
     raw_sample_length = len(raw_sequence)
     print("Number of samples {}".format(num_samples))
@@ -142,7 +145,8 @@ This function parses and pads the data
 """
 
 
-def process_data(max_seq_len, latent_dim, padding, memory_model, num_samples, x, raw_sequence):
+def process_data(max_seq_len, latent_dim, padding, memory_model, num_samples, x,
+                 raw_sequence):
     # separate out the input to the encoder and the mlp
     # mlp is fed the last one hot encoded input
     x_mlp = [0] * num_samples
@@ -387,7 +391,7 @@ def train_model(batch_size, epochs, memory_model, model,
         batch_size=batch_size,
         epochs=epochs,
         validation_split=0.3,
-        callbacks=[model_checkpoint_callback] #,
+        callbacks=[model_checkpoint_callback]  # ,
         #           TestCallback((encoder_input_data_test, query_test))]
     )
 
@@ -413,7 +417,8 @@ def predict_model(model, target_y_test, encoder_input_data_test,
     return y_pred
 
 
-def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred, sequence_len_test,
+def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
+                         sequence_len_test,
                          rep_token_first_pos_test):
     # total balanced accuracy accross the entire test dataset
     balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
@@ -467,6 +472,13 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred, sequence_len
 
 def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
                         sequence_len_test):
+    x = [((s * d * 1.0) / avg_test_acc) for s, d in
+         zip(sequence_len_test, dist_test)]
+    test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
+    print(test_accs.shape)
+    test_accs = [0.1 if acc < 1. else 0.9 for acc in
+                 test_accs.squeeze().tolist()]
+
     if kern == 'Gaussian':
         # throughout training - take average error
         # earlyon maybe a different model is better and maybe at the end a diff
@@ -480,17 +492,32 @@ def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
         # best epoch try all functions - both papers on val data
         # then do this for every epoch - val data
         # dont use test data to tune hyperparams
-        x = [((s * d * 1.0) / avg_test_acc) for s, d in
-             zip(sequence_len_test, dist_test)]
-        test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
-        print(test_accs.shape)
-        test_accs = [0.1 if acc < 1. else 0.9 for acc in
-                     test_accs.squeeze().tolist()]
-
         # gaussian
         num = -1.0 * np.sum(np.log(test_accs))
         den = np.sum(np.power(x, 2))
-        tau = num * 1.0 / den
+
+    if kern == "Laplacian":
+        num = -1.0 * np.sum(np.log(test_accs))
+        den = np.sum(x)
+
+    if kern == "Linear":
+        num = np.sum(np.sum(np.subtract(1, test_accs)))
+        den = np.sum(x)
+
+    if kern == "Cosine":
+        num = np.sum(np.arccos(np.subtract(np.multiply(2., test_accs), 1)))
+        den = np.pi * np.sum(x)
+
+    if kern == "Quadratic":
+        num = np.sum(np.subtract(1.0, test_accs))
+        den = np.sum(np.power(x, 2))
+
+    if kern == "Secant":
+        num = np.sum(np.log(1. / np.sum(test_accs) + np.sqrt(
+            1. / np.sum(np.subtract(np.power(test_accs, 2), 1.)))))
+        den = np.sum(np.power(x, 2))
+
+    tau = num * 1.0 / den
     return tau, test_accs
 
 
@@ -501,6 +528,33 @@ def compute_l2_loss(tau, kern, test_accs):
         # test_acc b/w 0 and 1
         f_gauss_loss = np.mean(np.power((f_gauss - test_accs), 2))
         return f_gauss_loss
+
+    if kern == "Laplacian":
+        f_lap = np.exp(-1 * tau * np.sum(x))
+        # test_acc b/w 0 and 1
+        f_lap_loss = np.mean(np.power((f_lap - test_accs), 2))
+        return f_lap_loss
+
+    if kern == "Linear":
+        f_lin = (1 - (1 * tau * np.sum(x)))
+        f_lin_loss = np.mean(np.power((f_lin - test_accs), 2))
+        return f_lin_loss
+
+    if kern == "Cosine":
+        f_cos = 1 / 2 * np.cos(tau * np.sum(x) * np.pi)
+        f_cos_loss = np.mean(np.power((f_cos - test_accs), 2))
+        return f_cos_loss
+
+    if kern == "Quadratic":
+        f_qua = 1 - tau * np.sum(np.power(x, 2))
+        f_qua_loss = np.mean(np.power((f_qua - test_accs), 2))
+        return f_qua_loss
+
+    if kern == "Secant":
+        f_sec = 2 * 1.0 / (np.exp(-1 * tau * np.sum(np.power(x, 2))) + np.exp(
+            1 * tau * np.sum(np.power(x, 2))))
+        f_sec_loss = np.mean(np.power((f_sec - test_accs), 2))
+        return f_sec_loss
 
 
 def kernel_matching(y_true, y_pred, dist_test, sequence_len_test):
@@ -532,9 +586,9 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_len_test):
 
 
 def main(args):
-
     if args.debug == 1:
-        args.root_location = '/Users/sherin/Documents/memory_retention/'
+        args.root_location = \
+            '/Users/sherin/Documents/research/server_version_memory/Memory/'
     else:
         args.root_location = '/workspace/memory_clean/Memory/'
     print("Loading the dataset")
@@ -543,7 +597,8 @@ def main(args):
 
     print("processing the dataset")
     encoder_input_data, query_data, raw_sequence_padded = \
-        process_data(args.max_seq_len, args.latent_dim, args.padding, args.nn_model, num_samples,
+        process_data(args.max_seq_len, args.latent_dim, args.padding,
+                     args.nn_model, num_samples,
                      x, raw_sequence)
 
     print("Creating train and test split")
@@ -573,7 +628,8 @@ def main(args):
 
     # define the neural network model
     print("defining the Neural Network")
-    model = define_nn_model(args.max_seq_len, args.nn_model, args.latent_dim, raw_sequence_train,
+    model = define_nn_model(args.max_seq_len, args.nn_model, args.latent_dim,
+                            raw_sequence_train,
                             raw_sequence_test)
 
     # train and save the best model
@@ -595,12 +651,18 @@ def main(args):
                            query_test)
 
     # compute accuracy based on seq len and number of intervening tokens
-    dist_test, balanced_accuracy = compute_save_metrics(args.max_seq_len, args.nn_model,
+    dist_test, balanced_accuracy = compute_save_metrics(args.max_seq_len,
+                                                        args.nn_model,
                                                         target_y_test, y_pred,
                                                         sequence_len_test,
                                                         rep_token_first_pos_test)
 
     print("The balanced accuracy is {}".format(balanced_accuracy))
+
+    # we need to calculate p(recall) only for positive instances, whether the
+    # model is able to recall a previously seen item or not, so remove the
+    # negative instances : where the query token is not previously seen by the
+    # model
 
     # learn which kernel best models the test accuracy
     print("Finding the best kernel to model the test accuracy")
@@ -610,13 +672,19 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nn_model", default="lstm", type=str, help="neural network model to be used")
-    parser.add_argument("--epochs",  default=1, type=int, help="Number of epochs to be run for")
-    parser.add_argument("--batch_size",  default=50, type=int, help="Number of samples in one batch")
-    parser.add_argument("--latent_dim",  default=256, type=int, help="size of the memory encoding")
-    parser.add_argument("--padding", default="post_padding", type=str, help="Type of padding, pre-padding or "
-                                        "post-padding")
-    parser.add_argument("--max_seq_len",  default=26, type=int, help="Maximum sequence length")
+    parser.add_argument("--nn_model", default="lstm", type=str,
+                        help="neural network model to be used")
+    parser.add_argument("--epochs", default=1, type=int,
+                        help="Number of epochs to be run for")
+    parser.add_argument("--batch_size", default=50, type=int,
+                        help="Number of samples in one batch")
+    parser.add_argument("--latent_dim", default=256, type=int,
+                        help="size of the memory encoding")
+    parser.add_argument("--padding", default="post_padding", type=str,
+                        help="Type of padding, pre-padding or "
+                             "post-padding")
+    parser.add_argument("--max_seq_len", default=26, type=int,
+                        help="Maximum sequence length")
     parser.add_argument("--debug", type=int, default=1, help="is it debug")
     args = parser.parse_args()
 
