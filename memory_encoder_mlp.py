@@ -472,7 +472,8 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
 
 def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
                         sequence_len_test):
-    x = [((s * d * 1.0) / avg_test_acc) for s, d in
+    # normalize s and d by dividing by 100
+    x = [((s * d * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
          zip(sequence_len_test, dist_test)]
     test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
     print(test_accs.shape)
