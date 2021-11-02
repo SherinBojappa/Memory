@@ -433,6 +433,7 @@ def predict_model(model, target_val, encoder_input_val,
                   query_input_val):
     y_true = target_val
     y_test = model.predict([encoder_input_val, query_input_val])
+    y_test = sigmoid(y_test)
     # y_pred = np.argmax(y_test, axis=1)
     # for the kernel functions you would need values which are not 0 or 1
     y_pred_binary = y_test > 0.5
@@ -491,6 +492,12 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
     f.close()
 
     return dist_test, balanced_accuracy
+
+
+def sigmoid(x):
+    z = np.exp(-x)
+    sig = 1 / (1 + z)
+    return sig
 
 
 def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
