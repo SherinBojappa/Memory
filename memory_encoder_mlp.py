@@ -491,7 +491,9 @@ def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
     #test_accs = [0.1 if acc < 1. else 0.9 for acc in
     #             test_accs.squeeze().tolist()]
     # test accs now are continuous non-zero values
+
     test_accs = np.array(y_pred.ravel())
+    test_accs = [0.001 if test_acc == 0 else test_acc for test_acc in test_accs]
 
 
     if kern == 'Gaussian':
@@ -637,7 +639,8 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_length_val,
     exp_forgetting_functions = ['diff_dist_strength', 'diff_dist',
                                 'diff_strength']
 
-    test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
+    #test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
+    test_accs = np.array(y_pred.ravel())
     for exp_forgetting_function in exp_forgetting_functions:
         exp_forgetting_l2_loss = compute_loss_forgetting_functions(
             exp_forgetting_function, avg_test_acc, dist_test, sequence_length_val,
@@ -648,11 +651,13 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_length_val,
     # find the least loss
     min_index = kern_loss.index(min(kern_loss))
     print("The best kernel is {}".format(kernels[min_index]))
+    print("the value of the loss is {}".format(min(kern_loss)))
 
     min_index_exp_forgetting_function = \
         exp_forgetting_function_loss.index(min(exp_forgetting_function_loss))
     print("The best forgetting function is {}".format(exp_forgetting_functions[min_index_exp_forgetting_function]))
 
+    print("the value of the loss is {}".format(min(exp_forgetting_function_loss)))
     return kernels[min_index], tau_kernels[min_index]
 
 
@@ -735,7 +740,7 @@ def main(args):
 
     # load the best model after training is complete
     print("loading the best model")
-    #model = keras.models.load_model(checkpoint_filepath)
+    model = keras.models.load_model(checkpoint_filepath)
 
     # test the model on novel data
     print("predicting on novel inputs")
