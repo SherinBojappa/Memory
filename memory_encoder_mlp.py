@@ -351,8 +351,11 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     similarity_output = similarity_net([encoder_states, query_input_node])
     similarity_net.summary()
     """
-    x = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
-    similarity_output = keras.layers.Dense(1, activation=keras.activations.sigmoid)(x)
+    #x = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
+    #similarity_output = keras.layers.Dense(1, activation=keras.activations.sigmoid)(x)
+
+    similarity_output = tf.reshape(
+        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
     # construct another model to learn the similarities between the encoded
     # input and the query vector
     # Define the model that will turn
