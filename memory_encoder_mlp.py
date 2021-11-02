@@ -409,13 +409,15 @@ def train_model(batch_size, epochs, memory_model, model,
     return
 
 
-def predict_model(model, target_y_test, encoder_input_val,
+def predict_model(model, target_val, encoder_input_val,
                   query_input_val):
-    y_true = target_y_test
+    y_true = target_val
     y_test = model.predict([encoder_input_val, query_input_val])
     # y_pred = np.argmax(y_test, axis=1)
-    y_pred = y_test > 0.5
-    return y_pred
+    # for the kernel functions you would need values which are not 0 or 1
+    y_pred_binary = y_test > 0.5
+    y_pred_continuous = y_test
+    return y_pred_binary, y_pred_continuous
 
 
 def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
@@ -478,10 +480,13 @@ def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
     # normalize s and d by dividing by 100
     x = [((s * d * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
          zip(sequence_length_val, dist_test)]
-    test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
-    print(test_accs.shape)
-    test_accs = [0.1 if acc < 1. else 0.9 for acc in
-                 test_accs.squeeze().tolist()]
+    #test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
+    #print(test_accs.shape)
+    #test_accs = [0.1 if acc < 1. else 0.9 for acc in
+    #             test_accs.squeeze().tolist()]
+    # test accs now are continuous non-zero values
+    test_accs = np.array(y_pred.ravel())
+
 
     if kern == 'Gaussian':
         # throughout training - take average error
@@ -599,11 +604,12 @@ def compute_loss_forgetting_functions(forgetting_function, avg_test_acc,
                                        ((f_diff_strength - test_accs), 2))
         return f_diff_strength_loss
 
-def kernel_matching(y_true, y_pred, dist_test, sequence_length_val):
+def kernel_matching(y_true, y_pred, dist_test, sequence_length_val,
+                    y_pred_binary_pos_samples):
     kernels = ['Gaussian', 'Laplacian', 'Linear', 'Cosine', 'Quadratic',
                'Secant']
 
-    avg_test_acc = balanced_accuracy_score(y_true, y_pred)
+    avg_test_acc = balanced_accuracy_score(y_true, y_pred_binary_pos_samples)
     print("computing optimal tau")
     kern_loss = []
     tau_kernels = []
@@ -726,13 +732,13 @@ def main(args):
 
     # test the model on novel data
     print("predicting on novel inputs")
-    y_pred = predict_model(model, target_val, encoder_input_val,
-                           query_input_val)
+    y_pred_binary, y_pred_continuous = predict_model(model, target_val,
+                                         encoder_input_val, query_input_val)
 
     # compute accuracy based on seq len and number of intervening tokens
     dist_test, balanced_accuracy = compute_save_metrics(args.max_seq_len,
                                                         args.nn_model,
-                                                        target_val, y_pred,
+                                                        target_val, y_pred_binary,
                                                         sequence_length_val,
                                                         rep_token_pos_val)
 
@@ -746,7 +752,8 @@ def main(args):
 
 
     target_val_pos_samples = np.delete(target_val, negative_samples[0])
-    y_pred_pos_samples = np.delete(y_pred, negative_samples[0])
+    y_pred_pos_samples = np.delete(y_pred_continuous, negative_samples[0])
+    y_pred_binary_pos_samples = np.delete(y_pred_binary, negative_samples[0])
     dist_pos_samples = np.delete(dist_test, negative_samples[0])
     seq_len_test_pos_samples = np.delete(sequence_length_val, negative_samples[0])
 
@@ -754,7 +761,8 @@ def main(args):
     # learn which kernel best models the test accuracy
     print("Finding the best kernel to model the test accuracy")
     kernel, tau = kernel_matching(target_val_pos_samples, y_pred_pos_samples,
-                                  dist_pos_samples, seq_len_test_pos_samples)
+                                  dist_pos_samples, seq_len_test_pos_samples,
+                                  y_pred_binary_pos_samples)
 
 
 if __name__ == "__main__":
