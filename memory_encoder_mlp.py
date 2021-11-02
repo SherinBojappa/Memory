@@ -226,8 +226,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         """
         encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
         encoder_states = tf.concat((state_h, state_c), 1)
-        x = keras.layers.Dense(768)(encoder_states)
-        encoder_states = keras.layers.Dense(512)(x)
+        x = keras.layers.Dense(768, activation='relu')(encoder_states)
+        encoder_states = keras.layers.Dense(512, activation='relu')(x)
 
         lr = 0.0013378606854350151
         print("Encoder chosen is LSTM")
@@ -351,11 +351,12 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     similarity_output = similarity_net([encoder_states, query_input_node])
     similarity_net.summary()
     """
-    #x = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
+    x = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
     #similarity_output = keras.layers.Dense(1, activation=keras.activations.sigmoid)(x)
+    similarity_output = keras.layers.Dense(1)(x)
 
-    similarity_output = tf.reshape(
-        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
+    #similarity_output = tf.reshape(
+    #    tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
     # construct another model to learn the similarities between the encoded
     # input and the query vector
     # Define the model that will turn
@@ -370,7 +371,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     optimizer = keras.optimizers.SGD(learning_rate=lr_schedule)
 
     model.compile(
-        optimizer=RMSprop(learning_rate=lr), loss="binary_crossentropy",
+        optimizer=RMSprop(learning_rate=lr),
+        loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=["accuracy"]
     )
 
