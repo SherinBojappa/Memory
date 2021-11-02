@@ -210,6 +210,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         # Define an input sequence and process it.
         main_sequence = keras.Input(shape=(None, latent_dim * 2))
         query_input_node = keras.Input(shape=(latent_dim * 2))
+
+        """
         # encoder = Sequential()
         dense_layer = Sequential()
         encoder = keras.layers.LSTM(128, return_state=True)
@@ -221,6 +223,11 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         dense_layer.add(keras.layers.Dense(768))
         dense_layer.add(keras.layers.Dense(512))
         encoder_states = dense_layer(encoder_states)
+        """
+        encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
+        encoder_states = tf.concat((state_h, state_c), 1)
+        x = keras.layers.Dense(768)(encoder_states)
+        encoder_states = keras.layers.Dense(512)(x)
 
         lr = 0.0013378606854350151
         print("Encoder chosen is LSTM")
@@ -336,14 +343,16 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
 
     concatenated_output_shape = 1  # (latent_dim*4)+1
     print("The concatenated input shape is: " + str(concatenated_output_shape))
-
+    """
     similarity_net = Sequential()
     similarity_net.add(keras.layers.Concatenate(axis=1))
     similarity_net.add(keras.layers.Dense(1,
                        activation=keras.activations.sigmoid))
     similarity_output = similarity_net([encoder_states, query_input_node])
-
     similarity_net.summary()
+    """
+    x = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
+    similarity_output = keras.layers.Dense(1, activation=keras.activations.sigmoid)(x)
     # construct another model to learn the similarities between the encoded
     # input and the query vector
     # Define the model that will turn
@@ -484,7 +493,7 @@ def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
     # difficulty = seq len; time elapsed since last review = dist; strength =
     # average accuracy.
     # normalize s and d by dividing by 100
-    x = [((s * d * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
+    x = [((s * d * 1.0) / ((avg_test_acc+np.finfo(float).eps) * 100 * 100)) for s, d in
          zip(sequence_length_val, dist_test)]
     #test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
     #print(test_accs.shape)
@@ -584,7 +593,7 @@ def compute_loss_forgetting_functions(forgetting_function, avg_test_acc,
     # exp(-seq_len*intervening_tokens/avg_test_acc)
 
     if forgetting_function == 'diff_dist_strength':
-        x = [((s * d * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
+        x = [((s * d * 1.0) / ((avg_test_acc+np.finfo(float).eps) * 100 * 100)) for s, d in
              zip(sequence_length_val, dist_test)]
         x = np.array(x)
         f_diff_dist_strength = np.exp(-x)
@@ -604,7 +613,7 @@ def compute_loss_forgetting_functions(forgetting_function, avg_test_acc,
 
     # exp(-seq_len/avg_test_acc)
     elif forgetting_function == 'diff_strength':
-        x = [((s * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
+        x = [((s * 1.0) / ((avg_test_acc+np.finfo(float).eps) * 100 * 100)) for s, d in
              zip(sequence_length_val, dist_test)]
         x = np.array(x)
         f_diff_strength = np.exp(-x)
