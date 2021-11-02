@@ -200,8 +200,8 @@ def process_data(max_seq_len, latent_dim, padding, memory_model, num_samples, x,
     return encoder_input_data, mlp_input_data, raw_sequence_padded
 
 
-def define_nn_model(max_seq_len, memory_model, latent_dim, raw_sequence_train,
-                    raw_sequence_test):
+def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
+                    raw_seq_val):
     # Define an input sequence and process it.
     main_sequence = keras.Input(shape=(None, latent_dim * 2))
     query_input_node = keras.Input(shape=(latent_dim * 2))
@@ -319,8 +319,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_sequence_train,
         # encoder_input_data_train/test must now be decoded to have a list of token_ids
         # encoder_input_data_train = np.array(orthonormal_decode(encoder_input_data_train, orthonormal_vectors))
         # encoder_input_data_test = np.array(orthonormal_decode(encoder_input_data_test, orthonormal_vectors))
-        encoder_input_data_train = raw_sequence_train
-        encoder_input_data_test = raw_sequence_test
+        encoder_input_train = raw_seq_train
+        encoder_input_val = raw_seq_val
 
     # query_encoder = Sequential()
     # query_ip_shape = query_train.shape[1]
@@ -374,9 +374,8 @@ class TestCallback(Callback):
 
 
 def train_model(batch_size, epochs, memory_model, model,
-                encoder_input_data_train, query_train, target_y_train,
-                encoder_input_data_test, query_test,
-                checkpoint_filepath):
+                encoder_input_train, encoder_input_val, query_input_train,
+                query_input_val, target_train, target_val, checkpoint_filepath):
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
         monitor="val_accuracy",
@@ -385,14 +384,16 @@ def train_model(batch_size, epochs, memory_model, model,
         save_best_only=True
     )
 
+    # test train split on the train dataset
+
     history = model.fit(
-        [encoder_input_data_train, query_train],
-        target_y_train,
+        [encoder_input_train, query_input_train],
+        target_train,
         batch_size=batch_size,
         epochs=epochs,
-        validation_split=0.3,
+        validation_data=([encoder_input_val, query_input_val], target_val),
         callbacks=[model_checkpoint_callback]  # ,
-        #           TestCallback((encoder_input_data_test, query_test))]
+        #           TestCallback((encoder_input_val, query_input_val))]
     )
 
     print("Number of epochs run: " + str(len(history.history["loss"])))
@@ -408,29 +409,29 @@ def train_model(batch_size, epochs, memory_model, model,
     return
 
 
-def predict_model(model, target_y_test, encoder_input_data_test,
-                  query_test):
+def predict_model(model, target_y_test, encoder_input_val,
+                  query_input_val):
     y_true = target_y_test
-    y_test = model.predict([encoder_input_data_test, query_test])
+    y_test = model.predict([encoder_input_val, query_input_val])
     # y_pred = np.argmax(y_test, axis=1)
     y_pred = y_test > 0.5
     return y_pred
 
 
 def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
-                         sequence_len_test,
-                         rep_token_first_pos_test):
+                         sequence_length_val,
+                         rep_token_pos_val):
     # total balanced accuracy accross the entire test dataset
     balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
 
     # Find the balanced accuracy accross different sequence length
-    sequence_len_arr = np.array(sequence_len_test)
+    sequence_len_arr = np.array(sequence_length_val)
     # balanced_acc_seq_len of 0 and 1 are meaningless
     balanced_acc_seq_len = np.zeros(
         shape=(max_seq_len, max_seq_len))  # [0]*(max_seq_len+1)
 
     dist_arr = []
-    rep_first_token_test = np.array(rep_token_first_pos_test)
+    rep_first_token_test = np.array(rep_token_pos_val)
     # dist_test == max_seq_len means there were no repeats,
     # should be fine as we ignore entries with max len later on
     rep_token_test = np.where(rep_first_token_test == -1, max_seq_len,
@@ -471,10 +472,12 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
 
 
 def compute_optimal_tau(kern, avg_test_acc, y_true, y_pred, dist_test,
-                        sequence_len_test):
+                        sequence_length_val):
+    # difficulty = seq len; time elapsed since last review = dist; strength =
+    # average accuracy.
     # normalize s and d by dividing by 100
     x = [((s * d * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
-         zip(sequence_len_test, dist_test)]
+         zip(sequence_length_val, dist_test)]
     test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
     print(test_accs.shape)
     test_accs = [0.1 if acc < 1. else 0.9 for acc in
@@ -560,7 +563,43 @@ def compute_l2_loss(tau, kern, test_accs):
         return f_sec_loss
 
 
-def kernel_matching(y_true, y_pred, dist_test, sequence_len_test):
+def compute_loss_forgetting_functions(forgetting_function, avg_test_acc,
+                                      dist_test, sequence_length_val, test_accs):
+
+    # difficulty = seq len; time elapsed since last review = dist; strength =
+    # average accuracy.
+    # exp(-seq_len*intervening_tokens/avg_test_acc)
+
+    if forgetting_function == 'diff_dist_strength':
+        x = [((s * d * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
+             zip(sequence_length_val, dist_test)]
+        x = np.array(x)
+        f_diff_dist_strength = np.exp(-x)
+        f_diff_dist_strength_loss = np.mean(np.power
+                                            ((f_diff_dist_strength - test_accs), 2))
+        return f_diff_dist_strength_loss
+
+    # exp(-seq_len*intervening_tokens)
+    elif forgetting_function == 'diff_dist':
+        x = [((s * d * 1.0) / (100 * 100)) for s, d in
+             zip(sequence_length_val, dist_test)]
+        x = np.array(x)
+        f_diff_dist = np.exp(-x)
+        f_diff_dist_loss = np.mean(np.power
+                                   ((f_diff_dist - test_accs), 2))
+        return f_diff_dist_loss
+
+    # exp(-seq_len/avg_test_acc)
+    elif forgetting_function == 'diff_strength':
+        x = [((s * 1.0) / (avg_test_acc * 100 * 100)) for s, d in
+             zip(sequence_length_val, dist_test)]
+        x = np.array(x)
+        f_diff_strength = np.exp(-x)
+        f_diff_strength_loss = np.mean(np.power
+                                       ((f_diff_strength - test_accs), 2))
+        return f_diff_strength_loss
+
+def kernel_matching(y_true, y_pred, dist_test, sequence_length_val):
     kernels = ['Gaussian', 'Laplacian', 'Linear', 'Cosine', 'Quadratic',
                'Secant']
 
@@ -568,22 +607,39 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_len_test):
     print("computing optimal tau")
     kern_loss = []
     tau_kernels = []
+    exp_forgetting_function_loss = []
     # compute x - seq_len*dist
 
     for kern in kernels:
         print("Kernel type is {}".format(kern))
 
         tau, test_accs = compute_optimal_tau(kern, avg_test_acc, y_true, y_pred,
-                                             dist_test, sequence_len_test)
+                                             dist_test, sequence_length_val)
         tau_kernels.append(tau)
         print("optimal value of tau is {}".format(tau))
         l2_loss = compute_l2_loss(tau, kern, test_accs)
         print("L2 loss for kernel {} is {}".format(kern, l2_loss))
         kern_loss.append(l2_loss)
 
+    # compute l2 loss for functions from Reddy et al paper
+    exp_forgetting_functions = ['diff_dist_strength', 'diff_dist',
+                                'diff_strength']
+
+    test_accs = np.array(y_true.ravel()) & np.array(y_pred.ravel())
+    for exp_forgetting_function in exp_forgetting_functions:
+        exp_forgetting_l2_loss = compute_loss_forgetting_functions(
+            exp_forgetting_function, avg_test_acc, dist_test, sequence_length_val,
+            test_accs)
+        exp_forgetting_function_loss.append(exp_forgetting_l2_loss)
+
+
     # find the least loss
     min_index = kern_loss.index(min(kern_loss))
     print("The best kernel is {}".format(kernels[min_index]))
+
+    min_index_exp_forgetting_function = \
+        exp_forgetting_function_loss.index(min(exp_forgetting_function_loss))
+    print("The best forgetting function is {}".format(exp_forgetting_functions[min_index_exp_forgetting_function]))
 
     return kernels[min_index], tau_kernels[min_index]
 
@@ -624,16 +680,36 @@ def main(args):
         random_state=2,
         test_size=0.3)
 
+    # train val split
+    (encoder_input_train, encoder_input_val,
+     query_input_train, query_input_val,
+     target_train, target_val,
+     sequence_length_train, sequence_length_val,
+     token_rep_train, token_rep_val,
+     rep_token_pos_train, rep_token_pos_val,
+     raw_seq_train, raw_seq_val) = train_test_split(
+        encoder_input_data_train,
+        query_train,
+        target_y_train,
+        sequence_len_train,
+        token_repeated_train,
+        rep_token_first_pos_train,
+        raw_sequence_train,
+        random_state=2,
+        test_size=0.3)
+
     print("The number of examples in the training data set is " + str(
-        len(encoder_input_data_train)))
+        len(encoder_input_train)))
     print("The number of example in the test data set is " + str(
         len(encoder_input_data_test)))
+    print("The number of example in the validation data set is " + str(
+        len(encoder_input_val)))
 
     # define the neural network model
     print("defining the Neural Network")
     model = define_nn_model(args.max_seq_len, args.nn_model, args.latent_dim,
-                            raw_sequence_train,
-                            raw_sequence_test)
+                            raw_seq_train,
+                            raw_seq_val)
 
     # train and save the best model
     # adding params like epoch and val accuracy will save all the models
@@ -641,8 +717,8 @@ def main(args):
 
     print("training the neural network")
     train_model(args.batch_size, args.epochs, args.nn_model, model,
-                encoder_input_data_train, query_train, target_y_train,
-                encoder_input_data_test, query_test, checkpoint_filepath)
+                encoder_input_train, encoder_input_val, query_input_train,
+                query_input_val, target_train, target_val, checkpoint_filepath)
 
     # load the best model after training is complete
     print("loading the best model")
@@ -650,15 +726,15 @@ def main(args):
 
     # test the model on novel data
     print("predicting on novel inputs")
-    y_pred = predict_model(model, target_y_test, encoder_input_data_test,
-                           query_test)
+    y_pred = predict_model(model, target_val, encoder_input_val,
+                           query_input_val)
 
     # compute accuracy based on seq len and number of intervening tokens
     dist_test, balanced_accuracy = compute_save_metrics(args.max_seq_len,
                                                         args.nn_model,
-                                                        target_y_test, y_pred,
-                                                        sequence_len_test,
-                                                        rep_token_first_pos_test)
+                                                        target_val, y_pred,
+                                                        sequence_length_val,
+                                                        rep_token_pos_val)
 
     print("The balanced accuracy is {}".format(balanced_accuracy))
 
@@ -666,18 +742,18 @@ def main(args):
     # model is able to recall a previously seen item or not, so remove the
     # negative instances : where the query token is not previously seen by the
     # model
-    negative_samples = np.where(target_y_test == 0)
+    negative_samples = np.where(target_val == 0)
 
 
-    target_y_test_pos_samples = np.delete(target_y_test, negative_samples[0])
+    target_val_pos_samples = np.delete(target_val, negative_samples[0])
     y_pred_pos_samples = np.delete(y_pred, negative_samples[0])
     dist_pos_samples = np.delete(dist_test, negative_samples[0])
-    seq_len_test_pos_samples = np.delete(sequence_len_test, negative_samples[0])
+    seq_len_test_pos_samples = np.delete(sequence_length_val, negative_samples[0])
 
 
     # learn which kernel best models the test accuracy
     print("Finding the best kernel to model the test accuracy")
-    kernel, tau = kernel_matching(target_y_test_pos_samples, y_pred_pos_samples,
+    kernel, tau = kernel_matching(target_val_pos_samples, y_pred_pos_samples,
                                   dist_pos_samples, seq_len_test_pos_samples)
 
 
