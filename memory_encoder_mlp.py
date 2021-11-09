@@ -230,11 +230,14 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         dense_layer.add(keras.layers.Dense(512))
         encoder_states = dense_layer(encoder_states)
         """
-        encoder_outputs, state_h, state_c = keras.layers.LSTM(256, return_state=True)(main_sequence)
+        encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
         x = tf.concat((state_h, state_c), 1)
-        #x = keras.layers.Dense(768, activation='relu')(x)
-        #encoder_states = keras.layers.Dense(512)(x)
-        encoder_states = x
+        x = keras.layers.BatchNormalization()(x)
+        x = keras.layers.Dropout(0.2)(x)
+        x = keras.layers.Dense(768, activation='relu')(x)
+        x = keras.layers.BatchNormalization()(x)
+        x = keras.layers.Dropout(0.2)(x)
+        encoder_states = keras.layers.Dense(512)(x)
 
         lr = 0.0013378606854350151
         print("Encoder chosen is LSTM")
@@ -252,7 +255,11 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder.summary()
         """
         encoder_states = keras.layers.SimpleRNN(256)(main_sequence)
+        encoder_states = keras.layers.BatchNormalization()(encoder_states)
+        encoder_states = keras.layers.Dropout(0.2)(encoder_states)
         encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
+        encoder_states = keras.layers.BatchNormalization()(encoder_states)
+        encoder_states = keras.layers.Dropout(0.2)(encoder_states)
         encoder_states = keras.layers.Dense(512)(encoder_states)
 
         print("Encoder chosen is simple RNN")
@@ -298,7 +305,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_states = keras.layers.Conv1D(filters=512, kernel_size=3, padding='same',
                             strides=2, activation='relu')(encoder_states)
         encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
-        encoder_states = keras.layers.Dropout(0.3)(encoder_states)
+        encoder_states = keras.layers.BatchNormalization()(encoder_states)
+        encoder_states = keras.layers.Dropout(0.2)(encoder_states)
         encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
 
         print("Encoder chosen is CNN")
