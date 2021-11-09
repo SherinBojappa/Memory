@@ -396,7 +396,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
 
     model.compile(
         #optimizer=RMSprop(learning_rate=1e-3),
-        optimizer=Adam(learning_rate=1e-1),
+        optimizer=Adam(learning_rate=1e-2),
         loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=["accuracy"]
     )
