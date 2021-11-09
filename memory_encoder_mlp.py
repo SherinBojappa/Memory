@@ -23,6 +23,11 @@ import pickle
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.callbacks import Callback
 
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
 
 # transformer block implementations
 class TransformerBlock(layers.Layer):
@@ -343,17 +348,13 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
 
     concatenated_output_shape = 1  # (latent_dim*4)+1
     print("The concatenated input shape is: " + str(concatenated_output_shape))
-    """
-    similarity_net = Sequential()
-    similarity_net.add(keras.layers.Concatenate(axis=1))
-    similarity_net.add(keras.layers.Dense(1,
-                       activation=keras.activations.sigmoid))
-    similarity_output = similarity_net([encoder_states, query_input_node])
-    similarity_net.summary()
-    """
+
     y = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
-    y = keras.layers.Dense(256, activation=keras.activations.relu)(y)
+    #y = keras.layers.Dense(256, activation=keras.activations.relu)(y)
+    y = keras.layers.Dense(768, activation=keras.activations.relu)(y)
+    y = keras.layers.Dense(512, activation=keras.activations.relu)(y)
     similarity_output = keras.layers.Dense(1)(y)
+
 
     #similarity_output = tf.reshape(
     #    tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
