@@ -231,13 +231,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_states = dense_layer(encoder_states)
         """
         encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
-        x = tf.concat((state_h, state_c), 1)
-        x = keras.layers.BatchNormalization()(x)
-        x = keras.layers.Dropout(0.2)(x)
-        x = keras.layers.Dense(768, activation='relu')(x)
-        x = keras.layers.BatchNormalization()(x)
-        x = keras.layers.Dropout(0.2)(x)
-        encoder_states = keras.layers.Dense(512)(x)
+        encoder_states = tf.concat((state_h, state_c), 1)
+
 
         lr = 0.0013378606854350151
         print("Encoder chosen is LSTM")
@@ -255,12 +250,12 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder.summary()
         """
         encoder_states = keras.layers.SimpleRNN(256)(main_sequence)
-        encoder_states = keras.layers.BatchNormalization()(encoder_states)
-        encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
-        encoder_states = keras.layers.BatchNormalization()(encoder_states)
-        encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        encoder_states = keras.layers.Dense(512)(encoder_states)
+        #encoder_states = keras.layers.BatchNormalization()(encoder_states)
+        #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
+        #encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
+        #encoder_states = keras.layers.BatchNormalization()(encoder_states)
+        #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
+        #encoder_states = keras.layers.Dense(512)(encoder_states)
 
         print("Encoder chosen is simple RNN")
         print("Shape of the encoder output is: " + str(encoder_states))
@@ -298,16 +293,16 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_output = encoder(main_sequence)
         encoder_states = encoder_output
         """
-        encoder_states = keras.layers.Conv1D(filters=128, kernel_size=3, padding='same',
+        encoder_states = keras.layers.Conv1D(filters=64, kernel_size=3, padding='same',
                             activation='relu', input_shape=input_shape)(main_sequence)
+        encoder_states = keras.layers.Conv1D(filters=128, kernel_size=3, padding='same',
+                            strides=2, activation='relu')(encoder_states)
         encoder_states = keras.layers.Conv1D(filters=256, kernel_size=3, padding='same',
                             strides=2, activation='relu')(encoder_states)
-        encoder_states = keras.layers.Conv1D(filters=512, kernel_size=3, padding='same',
-                            strides=2, activation='relu')(encoder_states)
         encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
-        encoder_states = keras.layers.BatchNormalization()(encoder_states)
-        encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
+        #encoder_states = keras.layers.BatchNormalization()(encoder_states)
+        #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
+        #encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
 
         print("Encoder chosen is CNN")
         print("Shape of the encoder output is: " + str(encoder_states))
@@ -370,16 +365,22 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     num_classes = 2
     input_shape = encoder_states.shape[1]
 
-    concatenated_output = tf.reshape(
-        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
+    #concatenated_output = tf.reshape(
+        #tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
 
     concatenated_output_shape = 1  # (latent_dim*4)+1
     print("The concatenated input shape is: " + str(concatenated_output_shape))
 
     y = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
     #y = keras.layers.Dense(256, activation=keras.activations.relu)(y)
+    y = keras.layers.BatchNormalization()(y)
+    y = keras.layers.Dropout(0.2)(y)
     y = keras.layers.Dense(768, activation=keras.activations.relu)(y)
+    y = keras.layers.BatchNormalization()(y)
+    y = keras.layers.Dropout(0.2)(y)
     y = keras.layers.Dense(512, activation=keras.activations.relu)(y)
+    y = keras.layers.BatchNormalization()(y)
+    y = keras.layers.Dropout(0.2)(y)
     similarity_output = keras.layers.Dense(1)(y)
 
 
@@ -389,18 +390,13 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     # input and the query vector
     # Define the model that will turn
     # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-    model = keras.Model([main_sequence, query_input_node], concatenated_output)
+    model = keras.Model([main_sequence, query_input_node], similarity_output)
     model.summary()
 
-    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=1e-2,
-        decay_steps=10000,
-        decay_rate=0.9)
-    optimizer = keras.optimizers.SGD(learning_rate=lr_schedule)
 
     model.compile(
         #optimizer=RMSprop(learning_rate=1e-3),
-        optimizer=Adam(learning_rate=1e-3),
+        optimizer=Adam(learning_rate=1e-1),
         loss=keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=["accuracy"]
     )
@@ -433,6 +429,14 @@ def train_model(batch_size, epochs, memory_model, model,
         save_best_only=True
     )
 
+    def scheduler(epoch, lr):
+        if epoch < 10:
+            return lr
+        else:
+            return lr * 0.9
+
+    callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
+
     # test train split on the train dataset
 
     history = model.fit(
@@ -441,7 +445,7 @@ def train_model(batch_size, epochs, memory_model, model,
         batch_size=batch_size,
         epochs=epochs,
         validation_data=([encoder_input_val, query_input_val], target_val),
-        callbacks=[model_checkpoint_callback]  # ,
+        callbacks=[model_checkpoint_callback, callback]  # ,
         #           TestCallback((encoder_input_val, query_input_val))]
     )
 
