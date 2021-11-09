@@ -240,6 +240,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         # Define an input sequence and process it.
         main_sequence = keras.Input(shape=(None, latent_dim * 2))
         query_input_node = keras.Input(shape=(latent_dim * 2))
+        """
         encoder = Sequential()
         encoder.add(keras.layers.SimpleRNN(256))
         encoder.add(keras.layers.Dense(1024, activation='relu'))
@@ -247,6 +248,10 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_output = encoder(main_sequence)
         encoder_states = encoder_output
         encoder.summary()
+        """
+        encoder_states = keras.layers.SimpleRNN(256)(main_sequence)
+        encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
+        encoder_states = keras.layers.Dense(512)(encoder_states)
 
         print("Encoder chosen is simple RNN")
         print("Shape of the encoder output is: " + str(encoder_states))
@@ -255,6 +260,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         input_shape = (max_seq_len, latent_dim * 2)
         main_sequence = keras.Input(shape=(None, latent_dim * 2))
         query_input_node = keras.Input(shape=(latent_dim * 2))
+        """
         encoder = Sequential()
         # there are 256 different channels and each channel 7 tokens are taken at once, and convolution is performed
         # dimesion of input is max_seq_len(100)*latent_dim*2(512) so after convolution the output size is max_seq_len because padding is same
@@ -282,6 +288,17 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder.summary()
         encoder_output = encoder(main_sequence)
         encoder_states = encoder_output
+        """
+        encoder_states = keras.layers.Conv1D(filters=128, kernel_size=3, padding='same',
+                            activation='relu', input_shape=input_shape)(main_sequence)
+        encoder_states = keras.layers.Conv1D(filters=256, kernel_size=3, padding='same',
+                            strides=2, activation='relu')(encoder_states)
+        encoder_states = keras.layers.Conv1D(filters=512, kernel_size=3, padding='same',
+                            strides=2, activation='relu')(encoder_states)
+        encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
+        encoder_states = keras.layers.Dropout(0.3)(encoder_states)
+        encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
+
         print("Encoder chosen is CNN")
         print("Shape of the encoder output is: " + str(encoder_states))
         # lr = 0.00012691763008376296
