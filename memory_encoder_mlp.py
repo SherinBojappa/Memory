@@ -224,7 +224,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         dense_layer.add(keras.layers.Dense(512))
         encoder_states = dense_layer(encoder_states)
         """
-        encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
+        encoder_outputs, state_h, state_c = keras.layers.LSTM(256, return_state=True)(main_sequence)
         x = tf.concat((state_h, state_c), 1)
         #x = keras.layers.Dense(768, activation='relu')(x)
         encoder_states = keras.layers.Dense(512)(x)
@@ -473,18 +473,18 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
             y_true_seq_len = np.take(y_true, seq_len_indices[0])
             y_pred_seq_len = np.take(y_pred, seq_len_indices[0])
 
-            print("The number of sequences are: " + str(len(y_true_seq_len)))
+            #print("The number of sequences are: " + str(len(y_true_seq_len)))
             if len(y_true_seq_len) > 0:
                 balanced_acc_seq_len[seq_len][dist] = balanced_accuracy_score(
                     y_true_seq_len, y_pred_seq_len)
 
-            print(
-                "Balanced accuracy for seq len {} and dist {} is {}".format(
-                    seq_len,
-                    dist,
-                    balanced_acc_seq_len[
-                        seq_len][
-                        dist]))
+            #print(
+            #    "Balanced accuracy for seq len {} and dist {} is {}".format(
+            #        seq_len,
+            #        dist,
+            #        balanced_acc_seq_len[
+            #            seq_len][
+            #            dist]))
 
     # save the balanced accuracy per seq len
     f = open('balanced_acc_seq_len_dist_' + memory_model + '.pkl', 'wb')
