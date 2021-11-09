@@ -230,7 +230,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         dense_layer.add(keras.layers.Dense(512))
         encoder_states = dense_layer(encoder_states)
         """
-        encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
+        encoder_outputs, state_h, state_c = keras.layers.LSTM(256, return_state=True)(main_sequence)
         x = tf.concat((state_h, state_c), 1)
         #x = keras.layers.Dense(768, activation='relu')(x)
         #encoder_states = keras.layers.Dense(512)(x)
