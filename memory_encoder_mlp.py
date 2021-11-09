@@ -232,8 +232,9 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         """
         encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
         x = tf.concat((state_h, state_c), 1)
-        x = keras.layers.Dense(768, activation='relu')(x)
-        encoder_states = keras.layers.Dense(512)(x)
+        #x = keras.layers.Dense(768, activation='relu')(x)
+        #encoder_states = keras.layers.Dense(512)(x)
+        encoder_states = x
 
         lr = 0.0013378606854350151
         print("Encoder chosen is LSTM")
