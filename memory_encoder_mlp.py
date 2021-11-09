@@ -231,7 +231,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         """
         encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
         x = tf.concat((state_h, state_c), 1)
-        #x = keras.layers.Dense(768, activation='relu')(x)
+        x = keras.layers.Dense(768, activation='relu')(x)
         encoder_states = keras.layers.Dense(512)(x)
 
         lr = 0.0013378606854350151
@@ -343,8 +343,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     num_classes = 2
     input_shape = encoder_states.shape[1]
 
-    #concatenated_output = tf.reshape(
-    #    tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
+    concatenated_output = tf.reshape(
+        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
 
     concatenated_output_shape = 1  # (latent_dim*4)+1
     print("The concatenated input shape is: " + str(concatenated_output_shape))
@@ -362,7 +362,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     # input and the query vector
     # Define the model that will turn
     # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-    model = keras.Model([main_sequence, query_input_node], similarity_output)
+    model = keras.Model([main_sequence, query_input_node], concatenated_output)
     model.summary()
 
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
