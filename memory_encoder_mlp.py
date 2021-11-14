@@ -380,8 +380,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     y = keras.layers.BatchNormalization()(y)
     y = keras.layers.Dropout(0.2)(y)
     y = keras.layers.Dense(128, activation=keras.activations.relu)(y)
-    #y = keras.layers.BatchNormalization()(y)
-    #y = keras.layers.Dropout(0.2)(y)
+    y = keras.layers.BatchNormalization()(y)
+    y = keras.layers.Dropout(0.2)(y)
     similarity_output = keras.layers.Dense(1, activation='sigmoid')(y)
     #similarity_output = keras.layers.Dense(2, activation='softmax')(y)
 
