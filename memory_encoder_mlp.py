@@ -401,7 +401,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     model.compile(
         #optimizer=RMSprop(learning_rate=1e-3),
         optimizer=Adam(learning_rate=1e-3),
-        loss=keras.losses.BinaryCrossentropy(from_logits=True),
+        #loss=keras.losses.BinaryCrossentropy(from_logits=True),
+        loss=keras.losses.BinaryCrossentropy(from_logits=False),
         metrics=["accuracy"]
     )
 
@@ -470,7 +471,7 @@ def predict_model(model, target_val, encoder_input_val,
                   query_input_val):
 
     y_test = model.predict([encoder_input_val, query_input_val])
-    y_test = sigmoid(y_test)
+    #y_test = sigmoid(y_test)
     # y_pred = np.argmax(y_test, axis=1)
     # for the kernel functions you would need values which are not 0 or 1
     y_pred_binary = np.array([1 if y > 0.5 else 0 for y in y_test])
@@ -482,8 +483,8 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
                          sequence_length_val,
                          rep_token_pos_val):
     # total balanced accuracy accross the entire test dataset
-    y_pred = sigmoid(y_pred)
-    y_pred = np.array([1 if y > 0.5 else 0 for y in y_pred])
+    #y_pred = sigmoid(y_pred)
+    #y_pred = np.array([1 if y > 0.5 else 0 for y in y_pred])
     balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
 
     # Find the balanced accuracy accross different sequence length
