@@ -375,18 +375,16 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     print("The concatenated input shape is: " + str(concatenated_output_shape))
 
     y = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
-    #y = keras.layers.Dense(256, activation=keras.activations.relu)(y)
-    y = keras.layers.Dense(256, activation=keras.activations.relu)(y)
     y = keras.layers.BatchNormalization()(y)
     y = keras.layers.Dropout(0.2)(y)
-    y = keras.layers.Dense(128, activation=keras.activations.relu)(y)
+    y = keras.layers.Dense(768, activation=keras.activations.relu)(y)
+    y = keras.layers.BatchNormalization()(y)
+    y = keras.layers.Dropout(0.2)(y)
+    y = keras.layers.Dense(512, activation=keras.activations.relu)(y)
     y = keras.layers.BatchNormalization()(y)
     y = keras.layers.Dropout(0.2)(y)
     similarity_output = keras.layers.Dense(1, activation='sigmoid')(y)
     #similarity_output = keras.layers.Dense(2, activation='softmax')(y)
-
-    # use sigmoid here
-
 
     #similarity_output = tf.reshape(
     #    tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
