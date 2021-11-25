@@ -293,11 +293,14 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_output = encoder(main_sequence)
         encoder_states = encoder_output
         """
-        encoder_states = keras.layers.Conv1D(filters=64, kernel_size=3, padding='same',
+        # kernel size=1 because in this problem there is no relation between
+        # any 2 tokens.
+        # kernel size = 1 activation = tanh; pooling try others
+        encoder_states = keras.layers.Conv1D(filters=64, kernel_size=1, padding='same',
                             activation='relu', input_shape=input_shape)(main_sequence)
-        encoder_states = keras.layers.Conv1D(filters=128, kernel_size=3, padding='same',
+        encoder_states = keras.layers.Conv1D(filters=128, kernel_size=1, padding='same',
                             strides=2, activation='relu')(encoder_states)
-        encoder_states = keras.layers.Conv1D(filters=256, kernel_size=3, padding='same',
+        encoder_states = keras.layers.Conv1D(filters=256, kernel_size=1, padding='same',
                             strides=2, activation='relu')(encoder_states)
         encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
@@ -372,7 +375,6 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     print("The concatenated input shape is: " + str(concatenated_output_shape))
 
     y = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
-    #y = keras.layers.Dense(256, activation=keras.activations.relu)(y)
     y = keras.layers.BatchNormalization()(y)
     y = keras.layers.Dropout(0.2)(y)
     y = keras.layers.Dense(768, activation=keras.activations.relu)(y)
@@ -399,6 +401,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         optimizer=Adam(learning_rate=1e-3),
         #loss=keras.losses.BinaryCrossentropy(from_logits=True),
         loss=keras.losses.BinaryCrossentropy(from_logits=False),
+
         metrics=["accuracy"]
     )
 
