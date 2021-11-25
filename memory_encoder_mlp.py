@@ -296,16 +296,16 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         # kernel size=1 because in this problem there is no relation between
         # any 2 tokens.
         # kernel size = 1 activation = tanh; pooling try others
-        encoder_states = keras.layers.Conv1D(filters=64, kernel_size=1, padding='same',
-                            activation='tanh', input_shape=input_shape)(main_sequence)
         encoder_states = keras.layers.Conv1D(filters=128, kernel_size=1, padding='same',
-                            strides=2, activation='tanh')(encoder_states)
+                            activation='relu', input_shape=input_shape)(main_sequence)
         encoder_states = keras.layers.Conv1D(filters=256, kernel_size=1, padding='same',
-                            strides=2, activation='tanh')(encoder_states)
+                            strides=2, activation='relu')(encoder_states)
+        encoder_states = keras.layers.Conv1D(filters=512, kernel_size=1, padding='same',
+                            strides=2, activation='relu')(encoder_states)
         encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
-        #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        #encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
+        encoder_states = keras.layers.Dropout(0.3)(encoder_states)
+        encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
 
         print("Encoder chosen is CNN")
         print("Shape of the encoder output is: " + str(encoder_states))
