@@ -296,15 +296,15 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         # kernel size=1 because in this problem there is no relation between
         # any 2 tokens.
         # kernel size = 1 activation = tanh; pooling try others
-        encoder_states = keras.layers.Conv1D(filters=64, kernel_size=1, padding='same',
+        encoder_states = keras.layers.Conv1D(filters=16, kernel_size=1, padding='same',
                             activation='tanh', input_shape=input_shape)(main_sequence)
-        encoder_states = keras.layers.Conv1D(filters=128, kernel_size=1, padding='same',
-                            strides=10, activation='tanh')(encoder_states)
-        encoder_states = keras.layers.Conv1D(filters=256, kernel_size=1, padding='same',
-                            strides=10, activation='tanh')(encoder_states)
+        encoder_states = keras.layers.Conv1D(filters=32, kernel_size=1, padding='same',
+                            strides=2, activation='tanh')(encoder_states)
+        encoder_states = keras.layers.Conv1D(filters=64, kernel_size=1, padding='same',
+                            strides=2, activation='tanh')(encoder_states)
         encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
-        encoder_states = keras.layers.Dropout(0.3)(encoder_states)
+        #encoder_states = keras.layers.Dropout(0.3)(encoder_states)
         encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
 
         print("Encoder chosen is CNN")
@@ -376,14 +376,15 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
 
     y = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
     y = keras.layers.BatchNormalization()(y)
-    y = keras.layers.Dropout(0.2)(y)
+    #y = keras.layers.Dropout(0.2)(y)
     y = keras.layers.Dense(768, activation=keras.activations.relu)(y)
     y = keras.layers.BatchNormalization()(y)
-    y = keras.layers.Dropout(0.2)(y)
+    #y = keras.layers.Dropout(0.2)(y)
     y = keras.layers.Dense(512, activation=keras.activations.relu)(y)
     y = keras.layers.BatchNormalization()(y)
-    y = keras.layers.Dropout(0.2)(y)
-    similarity_output = keras.layers.Dense(1, activation='sigmoid')(y)
+    #y = keras.layers.Dropout(0.2)(y)
+    #similarity_output = keras.layers.Dense(1, activation='sigmoid')(y)
+    similarity_output = keras.layers.Dense(1)(y)
 
 
     #similarity_output = tf.reshape(
@@ -399,8 +400,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     model.compile(
         #optimizer=RMSprop(learning_rate=1e-3),
         optimizer=Adam(learning_rate=1e-3),
-        #loss=keras.losses.BinaryCrossentropy(from_logits=True),
-        loss=keras.losses.BinaryCrossentropy(from_logits=False),
+        loss=keras.losses.BinaryCrossentropy(from_logits=True),
+        #loss=keras.losses.BinaryCrossentropy(from_logits=False),
 
         metrics=["accuracy"]
     )
@@ -470,7 +471,7 @@ def predict_model(model, target_val, encoder_input_val,
                   query_input_val):
 
     y_test = model.predict([encoder_input_val, query_input_val])
-    #y_test = sigmoid(y_test)
+    y_test = sigmoid(y_test)
     # y_pred = np.argmax(y_test, axis=1)
     # for the kernel functions you would need values which are not 0 or 1
     y_pred_binary = np.array([1 if y > 0.5 else 0 for y in y_test])
@@ -482,7 +483,7 @@ def compute_save_metrics(max_seq_len, memory_model, y_true, y_pred,
                          sequence_length_val,
                          rep_token_pos_val):
     # total balanced accuracy accross the entire test dataset
-    #y_pred = sigmoid(y_pred)
+    y_pred = sigmoid(y_pred)
     y_pred = np.array([1 if y > 0.5 else 0 for y in y_pred])
     balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
 
