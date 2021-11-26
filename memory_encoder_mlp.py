@@ -731,7 +731,8 @@ def main(args):
             '/Users/sherin/Documents/research/server_version_memory/Memory/'
 
     else:
-        args.root_location = '/workspace/memory_clean/Memory/'
+        #args.root_location = '/workspace/memory_clean/Memory/'
+        args.root_location = '/data/datasets/memory'
     print("Loading the dataset")
     x, num_samples, sequence_len, token_repeated, rep_token_first_pos, \
     raw_sequence, target_y, orth_vectors = load_dataset(args)
