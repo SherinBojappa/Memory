@@ -401,8 +401,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
 
 
     model.compile(
-        #optimizer=RMSprop(learning_rate=1e-3),
-        optimizer=Adam(learning_rate=1e-3),
+        optimizer=RMSprop(learning_rate=1e-3),
+        #optimizer=Adam(learning_rate=1e-3),
         #loss=keras.losses.BinaryCrossentropy(from_logits=True),
         loss=keras.losses.BinaryCrossentropy(from_logits=False),
 
@@ -453,7 +453,8 @@ def train_model(batch_size, epochs, memory_model, model,
         batch_size=batch_size,
         epochs=epochs,
         validation_data=([encoder_input_val, query_input_val], target_val),
-        callbacks=[model_checkpoint_callback, callback]  # ,
+        callbacks=[model_checkpoint_callback],
+        #callbacks=[model_checkpoint_callback, callback]  # ,
         #           TestCallback((encoder_input_val, query_input_val))]
     )
 
