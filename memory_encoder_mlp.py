@@ -304,7 +304,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
                             strides=2, activation='tanh')(encoder_states)
         encoder_states = keras.layers.GlobalMaxPooling1D()(encoder_states)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
-        #encoder_states = keras.layers.Dropout(0.3)(encoder_states)
+        encoder_states = keras.layers.Dropout(0.3)(encoder_states)
         encoder_states = keras.layers.Dense(latent_dim * 2)(encoder_states)
 
         print("Encoder chosen is CNN")
@@ -368,12 +368,14 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     num_classes = 2
     input_shape = encoder_states.shape[1]
 
-    #concatenated_output = tf.reshape(
-        #tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
+    concatenated_output = tf.reshape(
+        tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
 
     concatenated_output_shape = 1  # (latent_dim*4)+1
     print("The concatenated input shape is: " + str(concatenated_output_shape))
 
+
+    """
     y = keras.layers.Concatenate(axis=1)([encoder_states, query_input_node])
     y = keras.layers.BatchNormalization()(y)
     y = keras.layers.Dropout(0.2)(y)
@@ -385,7 +387,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     y = keras.layers.Dropout(0.2)(y)
     similarity_output = keras.layers.Dense(1, activation='sigmoid')(y)
     #similarity_output = keras.layers.Dense(1)(y)
-
+    """
 
     #similarity_output = tf.reshape(
     #    tf.reduce_sum(encoder_states * query_input_node, axis=1), (-1, 1))
@@ -393,7 +395,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     # input and the query vector
     # Define the model that will turn
     # `encoder_input_data` & `decoder_input_data` into `decoder_target_data`
-    model = keras.Model([main_sequence, query_input_node], similarity_output)
+    #model = keras.Model([main_sequence, query_input_node], similarity_output)
+    model = keras.Model([main_sequence, query_input_node], concatenated_output)
     model.summary()
 
 
