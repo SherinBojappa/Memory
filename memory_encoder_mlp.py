@@ -732,7 +732,7 @@ def main(args):
 
     else:
         #args.root_location = '/workspace/memory_clean/Memory/'
-        args.root_location = '/data/datasets/memory/'
+        args.root_location = '/data/memory/'
     print("Loading the dataset")
     x, num_samples, sequence_len, token_repeated, rep_token_first_pos, \
     raw_sequence, target_y, orth_vectors = load_dataset(args)
