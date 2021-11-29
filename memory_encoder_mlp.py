@@ -252,10 +252,10 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_states = keras.layers.SimpleRNN(256)(main_sequence)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
         #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        #encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
+        encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
         #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        #encoder_states = keras.layers.Dense(512)(encoder_states)
+        encoder_states = keras.layers.Dense(512)(encoder_states)
 
         print("Encoder chosen is simple RNN")
         print("Shape of the encoder output is: " + str(encoder_states))
