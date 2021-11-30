@@ -714,6 +714,7 @@ def kernel_matching(y_true, y_pred, dist_test, sequence_length_val,
             exp_forgetting_function, avg_test_acc, dist_test, sequence_length_val,
             test_accs)
         exp_forgetting_function_loss.append(exp_forgetting_l2_loss)
+        print("L2 loss for forgetting function {} is {}".format(exp_forgetting_function, exp_forgetting_l2_loss))
 
 
     # find the least loss
