@@ -232,6 +232,8 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         """
         encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
         encoder_states = tf.concat((state_h, state_c), 1)
+        encoder_states = keras.layers.Dense(768)(encoder_states)
+        encoder_states = keras.layers.Dense(512)(encoder_states)
 
 
         lr = 0.0013378606854350151
