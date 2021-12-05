@@ -232,7 +232,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         """
         encoder_outputs, state_h, state_c = keras.layers.LSTM(128, return_state=True)(main_sequence)
         encoder_states = tf.concat((state_h, state_c), 1)
-        encoder_states = keras.layers.Dense(768)(encoder_states)
+        #encoder_states = keras.layers.Dense(768)(encoder_states)
         encoder_states = keras.layers.Dense(512)(encoder_states)
 
 
@@ -254,7 +254,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_states = keras.layers.SimpleRNN(256)(main_sequence)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
         #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
-        encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
+        #encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
         #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
         encoder_states = keras.layers.Dense(512)(encoder_states)
