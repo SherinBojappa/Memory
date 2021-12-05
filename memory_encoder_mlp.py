@@ -400,6 +400,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
     #model = keras.Model([main_sequence, query_input_node], similarity_output)
     model = keras.Model([main_sequence, query_input_node], concatenated_output)
     model.summary()
+    exit()
 
 
     model.compile(
