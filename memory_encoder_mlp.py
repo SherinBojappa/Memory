@@ -251,7 +251,7 @@ def define_nn_model(max_seq_len, memory_model, latent_dim, raw_seq_train,
         encoder_states = encoder_output
         encoder.summary()
         """
-        encoder_states = keras.layers.SimpleRNN(512)(main_sequence)
+        encoder_states = keras.layers.SimpleRNN(786)(main_sequence)
         #encoder_states = keras.layers.BatchNormalization()(encoder_states)
         #encoder_states = keras.layers.Dropout(0.2)(encoder_states)
         #encoder_states = keras.layers.Dense(1024, activation='relu')(encoder_states)
